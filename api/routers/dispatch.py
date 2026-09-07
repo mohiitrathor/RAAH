@@ -5,6 +5,7 @@ from api.schemas.dispatch import DispatchResult, CustomIncidentRequest
 from api.auth import AuthenticatedUser, Permission, require_permission
 from api.realtime.broadcaster import broadcaster
 from api.realtime.models import EventType
+from api.decision_evidence import evidence_store
 
 
 # ==============================================================
@@ -61,6 +62,14 @@ def dispatch_live_emergency(
     except Exception:
         pass
 
+    try:
+        evidence_store.record_dispatch(
+            dispatch_result=result,
+            sim_time=sim.state.current_time,
+        )
+    except Exception:
+        pass
+
     return result
 
 
@@ -113,6 +122,14 @@ def dispatch_incident(
             EventType.INCIDENT_DISPATCHED,
             result,
             sim.state.current_time,
+        )
+    except Exception:
+        pass
+
+    try:
+        evidence_store.record_dispatch(
+            dispatch_result=result,
+            sim_time=sim.state.current_time,
         )
     except Exception:
         pass

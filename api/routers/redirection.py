@@ -8,6 +8,7 @@ from redirection_engine import check_live_redirection
 from api.auth import AuthenticatedUser, Permission, require_permission
 from api.realtime.broadcaster import broadcaster
 from api.realtime.models import EventType
+from api.decision_evidence import evidence_store
 from api.schemas.redirection import (
     RedirectionResult,
     DecisionRecord,
@@ -144,6 +145,14 @@ def apply_redirection(
             EventType.REDIRECTION_EXECUTED,
             payload,
             sim.state.current_time,
+        )
+    except Exception:
+        pass
+
+    try:
+        evidence_store.record_redirection(
+            decision_payload=payload,
+            sim_time=sim.state.current_time,
         )
     except Exception:
         pass

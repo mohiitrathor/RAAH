@@ -32,6 +32,7 @@ from api.schemas.optimization import (
     CopilotSummaryResponse,
 )
 from Dispatch.optimization.decision_engine import DecisionEngine
+from api.decision_evidence import evidence_store
 
 router = APIRouter(
     prefix="/optimization",
@@ -179,6 +180,18 @@ def approve_recommendation(
             status_code=404,
             detail=res.error_message,
         )
+
+    try:
+        mode = getattr(getattr(decision_engine, "policy_engine", None), "config", None)
+        mode_val = mode.mode if mode else None
+        evidence_store.record_optimization(
+            recommendation=rec,
+            execution_result=res,
+            sim_time=sim.state.current_time,
+            policy_mode=mode_val,
+        )
+    except Exception:
+        pass
 
     return res.to_dict()
 
