@@ -37,6 +37,7 @@ from api.routers import (
     optimization,
     persistence,
     ingestion,
+    decision_evidence,
 )
 
 # Initialize structured logging
@@ -205,6 +206,14 @@ app.include_router(
 from api.realtime import realtime_router
 app.include_router(
     realtime_router,
+)
+
+# Decision Evidence / Explanation API (M13 Phase 2)
+app.include_router(
+    decision_evidence.router,
+    prefix="/decision-evidence",
+    tags=["Decision Evidence"],
+    dependencies=auth_dep,
 )
 
 
