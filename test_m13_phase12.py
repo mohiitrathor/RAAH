@@ -6,7 +6,16 @@ Rigorous verification of the CAD intake boundary and clinical safety contract:
 1. Schema Parsing & Field Validation
 2. Category A: Actual measurements supplied by CAD
 3. Category B: Legitimately transformed domain observations
-4. Category C Prohibition: Strict rejection of fabricated physiology
+4. Consciousness Handling:
+   - Missing consciousness remains None, NEVER defaulted to Alert.
+   - normalize() rejects payload when consciousness is missing.
+   - Explicit consciousness observations and UNCONSCIOUS call type mapped faithfully.
+5. Injury Type Handling:
+   - Generic trauma (TRAUMA, FALL, MVA, ASSAULT) without injury_type remains None, NEVER defaulted to Fracture.
+   - normalize() rejects payload when injury_type is missing.
+   - Unambiguous call types (BURN, FRACTURE, LACERATION) and explicit injury types mapped faithfully.
+   - Non-trauma calls require explicit injury confirmation (injury_occurred=False or injury_type="No Injury").
+6. Category C Prohibition: Strict rejection of fabricated physiology
    - No SpO2 = 90 when respiratory distress reported
    - No BP = 140/90 when hypertension reported
    - No Temp = 38.5 for infection
@@ -14,12 +23,12 @@ Rigorous verification of the CAD intake boundary and clinical safety contract:
    - No Pain Score = 6 for chest pain / trauma
    - No Glucose = 160 for diabetes
    - No resting physiological defaults (85, 96, 120, 80, 18, 37.0, 110)
-5. ML Boundary & Immutability (protected model executed only on complete verified data)
-6. Clear Rejection when Clinical Measurements are Missing (HTTP 422, no guessing)
-7. M2M Scoping & Authentication
-8. Durable Idempotency
-9. Observability & Telemetry Exposition
-10. Backwards Compatibility
+7. ML Boundary & Immutability (protected model executed only on complete verified data)
+8. Clear Rejection when Clinical Measurements are Missing (HTTP 422, no guessing)
+9. M2M Scoping & Authentication
+10. Durable Idempotency
+11. Observability & Telemetry Exposition
+12. Backwards Compatibility
 """
 
 import time
@@ -93,6 +102,32 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             oxygen_requirement=ox,
         )
 
+    # Helper to create a fully verified patient model with explicit clinical confirmations
+    def _create_verified_patient(
+        self,
+        age=50,
+        sex="Female",
+        consciousness="Alert",
+        injury_occurred=False,
+        injury_type=None,
+        vitals=None,
+        symptoms=None,
+        medical_history=None,
+    ):
+        v = vitals or self._create_verified_vitals()
+        inj = None
+        if injury_occurred is not None or injury_type is not None:
+            inj = CADInjury(injury_occurred=injury_occurred, injury_type=injury_type)
+        return CADPatientInput(
+            age=age,
+            sex=sex,
+            consciousness=consciousness,
+            injury=inj,
+            vitals=v,
+            symptoms=symptoms,
+            medical_history=medical_history,
+        )
+
     # ==================================================================
     # 1. CAD SCHEMA VALIDATION
     # ==================================================================
@@ -158,8 +193,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             CADIntakePayload(
                 external_incident_id="CAD-BAD-LON",
                 call_type="CARDIAC",
-                latitude=28.6,
-                longitude=195.0,
+                location=CADLocationInput(latitude=28.6, longitude=195.0),
             )
 
     def test_04_malformed_timestamp_rejected(self):
@@ -198,15 +232,18 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             pain=7,
             ox="Oxygen Mask",
         )
+        patient = self._create_verified_patient(
+            age=60,
+            sex="Male",
+            consciousness="Alert",
+            injury_occurred=False,
+            vitals=v,
+        )
         payload = CADIntakePayload(
             external_incident_id="CAD-A-01",
             call_type="CARDIAC",
             location=CADLocationInput(latitude=28.6, longitude=77.2),
-            patient=CADPatientInput(
-                age=60,
-                sex="Male",
-                vitals=v,
-            ),
+            patient=patient,
         )
         norm = CADTriageMapper.normalize(payload)
         self.assertEqual(norm["Heart_Rate"], 104.0)
@@ -222,18 +259,20 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
 
     def test_06_category_b_domain_transformations(self):
         """Category B: Legitimate transformations (call_type->Condition, Arrival_Mode, etc.)."""
+        patient = self._create_verified_patient(
+            age=55,
+            sex="Female",
+            consciousness="Alert",
+            injury_occurred=False,
+            symptoms=CADSymptoms(chest_pain=True, bleeding=False),
+            medical_history=CADMedicalHistory(hypertension=True, diabetes=False),
+        )
         payload = CADIntakePayload(
             external_incident_id="CAD-B-01",
             source="TEST_SOURCE",
             call_type="CHEST_PAIN",
             location=CADLocationInput(latitude=28.6139, longitude=77.2090),
-            patient=CADPatientInput(
-                age=55,
-                sex="Female",
-                symptoms=CADSymptoms(chest_pain=True, bleeding=False),
-                medical_history=CADMedicalHistory(hypertension=True, diabetes=False),
-                vitals=self._create_verified_vitals(),
-            ),
+            patient=patient,
         )
         norm = CADTriageMapper.normalize(payload)
         # Category B transforms
@@ -263,10 +302,10 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 external_incident_id=f"CAD-{ctype}",
                 call_type=ctype,
                 location=CADLocationInput(latitude=28.6, longitude=77.2),
-                patient=CADPatientInput(age=50, sex="Female", vitals=self._create_verified_vitals()),
+                patient=self._create_verified_patient(age=50, sex="Female"),
             )
-            res = CADTriageMapper.normalize(payload)
-            self.assertEqual(res["Condition"], expected_cond)
+            extracted = CADTriageMapper.extract_available_fields(payload)
+            self.assertEqual(extracted["Condition"], expected_cond)
 
     def test_08_normalization_deterministic_mapping(self):
         """Identical inputs produce identical normalized dictionaries."""
@@ -274,7 +313,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             external_incident_id="CAD-DET-01",
             call_type="CARDIAC",
             location=CADLocationInput(latitude=28.6, longitude=77.2),
-            patient=CADPatientInput(age=55, sex="Female", vitals=self._create_verified_vitals()),
+            patient=self._create_verified_patient(age=55, sex="Female"),
         )
         res1 = CADTriageMapper.normalize(payload)
         res2 = CADTriageMapper.normalize(payload)
@@ -286,7 +325,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             external_incident_id="CAD-SEV-CHECK",
             call_type="CARDIAC",
             location=CADLocationInput(latitude=28.6, longitude=77.2),
-            patient=CADPatientInput(age=70, sex="Male", vitals=self._create_verified_vitals()),
+            patient=self._create_verified_patient(age=70, sex="Male"),
         )
         res = CADTriageMapper.normalize(payload)
         self.assertNotIn("predicted_severity", res)
@@ -294,10 +333,194 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertNotIn("priority", res)
 
     # ==================================================================
-    # 3. CATEGORY C PROHIBITION: NO FABRICATION OF CLINICAL MEASUREMENTS
+    # 3. CONSCIOUSNESS SAFETY & STRICT OBSERVATION RULES
     # ==================================================================
 
-    def test_10_missing_vitals_extracted_as_none_never_defaulted(self):
+    def test_10a_missing_consciousness_extracted_as_none_never_alert(self):
+        """Missing consciousness must be extracted as None, NEVER defaulted to Alert."""
+        payload = CADIntakePayload(
+            external_incident_id="CAD-NO-CONSC",
+            call_type="CARDIAC",
+            location=CADLocationInput(latitude=28.6, longitude=77.2),
+            patient=CADPatientInput(
+                age=60,
+                sex="Male",
+                vitals=self._create_verified_vitals(),
+                injury=CADInjury(injury_occurred=False),
+                # consciousness is completely omitted
+            ),
+        )
+        extracted = CADTriageMapper.extract_available_fields(payload)
+        self.assertIsNone(extracted["Consciousness"], "Consciousness must be None when absent")
+        self.assertNotEqual(extracted["Consciousness"], "Alert", "Must NOT infer Alert from missing consciousness")
+
+        # normalize() MUST reject because Consciousness is missing
+        with self.assertRaises(CADNormalizationError) as ctx:
+            CADTriageMapper.normalize(payload)
+        self.assertIn("Consciousness", str(ctx.exception))
+
+    def test_10b_explicit_consciousness_observations_faithfully_mapped(self):
+        """Explicit consciousness states and AVPU codes are faithfully mapped."""
+        cases = [
+            ("Alert", "Alert"),
+            ("A", "Alert"),
+            ("Confused", "Confused"),
+            ("C", "Confused"),
+            ("Drowsy", "Drowsy"),
+            ("D", "Drowsy"),
+            ("Unconscious", "Unconscious"),
+            ("U", "Unconscious"),
+            ("UNRESPONSIVE", "Unconscious"),
+        ]
+        for raw_val, expected in cases:
+            payload = CADIntakePayload(
+                external_incident_id=f"CAD-C-{raw_val}",
+                call_type="CARDIAC",
+                location=CADLocationInput(latitude=28.6, longitude=77.2),
+                patient=CADPatientInput(
+                    age=50,
+                    sex="Female",
+                    consciousness=raw_val,
+                ),
+            )
+            extracted = CADTriageMapper.extract_available_fields(payload)
+            self.assertEqual(extracted["Consciousness"], expected)
+
+    def test_10c_unconscious_call_type_unambiguously_establishes_consciousness(self):
+        """UNCONSCIOUS call type unambiguously establishes Consciousness='Unconscious'."""
+        payload = CADIntakePayload(
+            external_incident_id="CAD-CALL-UNCONSC",
+            call_type="UNCONSCIOUS",
+            location=CADLocationInput(latitude=28.6, longitude=77.2),
+            patient=CADPatientInput(age=45, sex="Male"),
+        )
+        extracted = CADTriageMapper.extract_available_fields(payload)
+        self.assertEqual(extracted["Consciousness"], "Unconscious")
+
+    # ==================================================================
+    # 4. INJURY TYPE SAFETY & STRICT CONFIRMATION RULES
+    # ==================================================================
+
+    def test_11a_generic_trauma_without_injury_type_never_fracture(self):
+        """Generic trauma (TRAUMA, FALL, MVA, ASSAULT) without injury_type must NOT become Fracture."""
+        for call_t in ["TRAUMA", "FALL", "MVA", "ASSAULT"]:
+            payload = CADIntakePayload(
+                external_incident_id=f"CAD-{call_t}",
+                call_type=call_t,
+                location=CADLocationInput(latitude=28.6, longitude=77.2),
+                patient=CADPatientInput(
+                    age=35,
+                    sex="Male",
+                    consciousness="Alert",
+                    vitals=self._create_verified_vitals(),
+                    # no injury block or injury_type specified
+                ),
+            )
+            extracted = CADTriageMapper.extract_available_fields(payload)
+            self.assertIsNone(extracted["Injury_Type"], f"{call_t} without injury_type must leave Injury_Type=None")
+            self.assertNotEqual(extracted["Injury_Type"], "Fracture", f"{call_t} must NOT default to Fracture")
+
+            # normalize() must reject incomplete input
+            with self.assertRaises(CADNormalizationError) as ctx:
+                CADTriageMapper.normalize(payload)
+            self.assertIn("Injury_Type", str(ctx.exception))
+
+    def test_11b_unambiguous_call_types_and_explicit_injuries_mapped(self):
+        """Unambiguous call types (BURN, FRACTURE, LACERATION) and explicit injury types mapped."""
+        # Unambiguous call types
+        cases_call = [
+            ("BURN", "Burn"),
+            ("BURNS", "Burn"),
+            ("FRACTURE", "Fracture"),
+            ("LACERATION", "Laceration"),
+            ("STABBING", "Laceration"),
+        ]
+        for ctype, exp_inj in cases_call:
+            payload = CADIntakePayload(
+                external_incident_id=f"CAD-INJ-{ctype}",
+                call_type=ctype,
+                location=CADLocationInput(latitude=28.6, longitude=77.2),
+                patient=CADPatientInput(age=40, sex="Female", consciousness="Alert"),
+            )
+            extracted = CADTriageMapper.extract_available_fields(payload)
+            self.assertEqual(extracted["Injury_Type"], exp_inj)
+
+        # Explicit injury types
+        explicit_types = ["Head Injury", "Internal Injury", "Fracture", "Burn", "Laceration"]
+        for inj_t in explicit_types:
+            payload = CADIntakePayload(
+                external_incident_id=f"CAD-EXP-{inj_t}",
+                call_type="TRAUMA",
+                location=CADLocationInput(latitude=28.6, longitude=77.2),
+                patient=CADPatientInput(
+                    age=40,
+                    sex="Female",
+                    consciousness="Alert",
+                    injury=CADInjury(injury_type=inj_t),
+                ),
+            )
+            extracted = CADTriageMapper.extract_available_fields(payload)
+            self.assertEqual(extracted["Injury_Type"], inj_t)
+
+    def test_11c_non_trauma_injury_semantics(self):
+        """Non-trauma calls require explicit injury confirmation; never assumed absent."""
+        # Case 1: Non-trauma without injury info -> None, rejected
+        payload_no_inj = CADIntakePayload(
+            external_incident_id="CAD-NON-TRAUMA-EMPTY",
+            call_type="CARDIAC",
+            location=CADLocationInput(latitude=28.6, longitude=77.2),
+            patient=CADPatientInput(
+                age=55,
+                sex="Male",
+                consciousness="Alert",
+                vitals=self._create_verified_vitals(),
+            ),
+        )
+        extracted = CADTriageMapper.extract_available_fields(payload_no_inj)
+        self.assertIsNone(extracted["Injury_Type"])
+        with self.assertRaises(CADNormalizationError) as ctx:
+            CADTriageMapper.normalize(payload_no_inj)
+        self.assertIn("Injury_Type", str(ctx.exception))
+
+        # Case 2: Non-trauma with explicit injury_occurred=False -> "No Injury"
+        payload_confirmed_no_inj = CADIntakePayload(
+            external_incident_id="CAD-NON-TRAUMA-CONFIRMED",
+            call_type="CARDIAC",
+            location=CADLocationInput(latitude=28.6, longitude=77.2),
+            patient=CADPatientInput(
+                age=55,
+                sex="Male",
+                consciousness="Alert",
+                injury=CADInjury(injury_occurred=False),
+                vitals=self._create_verified_vitals(),
+            ),
+        )
+        extracted2 = CADTriageMapper.extract_available_fields(payload_confirmed_no_inj)
+        self.assertEqual(extracted2["Injury_Type"], "No Injury")
+        norm2 = CADTriageMapper.normalize(payload_confirmed_no_inj)
+        self.assertEqual(norm2["Injury_Type"], "No Injury")
+
+        # Case 3: Explicit injury_type="No Injury" -> "No Injury"
+        payload_explicit_no_inj = CADIntakePayload(
+            external_incident_id="CAD-NON-TRAUMA-EXP-NO-INJ",
+            call_type="RESPIRATORY",
+            location=CADLocationInput(latitude=28.6, longitude=77.2),
+            patient=CADPatientInput(
+                age=55,
+                sex="Female",
+                consciousness="Alert",
+                injury=CADInjury(injury_type="No Injury"),
+                vitals=self._create_verified_vitals(),
+            ),
+        )
+        extracted3 = CADTriageMapper.extract_available_fields(payload_explicit_no_inj)
+        self.assertEqual(extracted3["Injury_Type"], "No Injury")
+
+    # ==================================================================
+    # 5. CATEGORY C PROHIBITION: NO FABRICATION OF CLINICAL MEASUREMENTS
+    # ==================================================================
+
+    def test_12_missing_vitals_extracted_as_none_never_defaulted(self):
         """Missing clinical measurements remain None in extract_available_fields (no fabrication)."""
         payload = CADIntakePayload(
             external_incident_id="CAD-RAW-01",
@@ -307,6 +530,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 age=58,
                 sex="Male",
                 consciousness="Alert",
+                injury=CADInjury(injury_occurred=False),
                 symptoms=CADSymptoms(chest_pain=True, respiratory_distress=True),
                 medical_history=CADMedicalHistory(hypertension=True, diabetes=True),
             ),
@@ -330,7 +554,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIsNone(extracted["Pain_Score"], "Pain_Score must not be defaulted to 6")
         self.assertIsNone(extracted["Oxygen_Requirement"], "Oxygen_Requirement must not be defaulted")
 
-    def test_11_normalize_refuses_missing_clinical_measurements(self):
+    def test_13_normalize_refuses_missing_clinical_measurements(self):
         """normalize() raises CADNormalizationError when required measurements are absent."""
         payload = CADIntakePayload(
             external_incident_id="CAD-INCOMPLETE-01",
@@ -340,6 +564,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 age=50,
                 sex="Male",
                 consciousness="Alert",
+                injury=CADInjury(injury_occurred=False),
             ),
         )
         with self.assertRaises(CADNormalizationError) as ctx:
@@ -351,7 +576,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIn("Systolic_BP", err_msg)
         self.assertIn("GCS", err_msg)
 
-    def test_12_prohibited_respiratory_distress_spo2_fabrication(self):
+    def test_14_prohibited_respiratory_distress_spo2_fabrication(self):
         """System strictly does NOT fabricate SpO2=90 when respiratory distress is reported."""
         payload = CADIntakePayload(
             external_incident_id="CAD-RESP-DISTRESS",
@@ -360,6 +585,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             patient=CADPatientInput(
                 age=45,
                 sex="Female",
+                consciousness="Alert",
                 symptoms=CADSymptoms(respiratory_distress=True),
             ),
         )
@@ -368,7 +594,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIsNone(extracted["SpO2"], "SpO2 must NOT be fabricated as 90")
         self.assertIsNone(extracted["Respiratory_Rate"], "RR must NOT be fabricated as 26")
 
-    def test_13_prohibited_hypertension_bp_fabrication(self):
+    def test_15_prohibited_hypertension_bp_fabrication(self):
         """System strictly does NOT fabricate BP=140/90 when hypertension is reported."""
         payload = CADIntakePayload(
             external_incident_id="CAD-HTN",
@@ -377,6 +603,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             patient=CADPatientInput(
                 age=65,
                 sex="Male",
+                consciousness="Alert",
                 medical_history=CADMedicalHistory(hypertension=True),
             ),
         )
@@ -385,19 +612,19 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIsNone(extracted["Systolic_BP"], "Systolic_BP must NOT be fabricated as 140")
         self.assertIsNone(extracted["Diastolic_BP"], "Diastolic_BP must NOT be fabricated as 90")
 
-    def test_14_prohibited_infection_temp_fabrication(self):
+    def test_16_prohibited_infection_temp_fabrication(self):
         """System strictly does NOT fabricate Temperature=38.5 for infection."""
         payload = CADIntakePayload(
             external_incident_id="CAD-INFECT",
             call_type="INFECTION",
             location=CADLocationInput(latitude=28.6, longitude=77.2),
-            patient=CADPatientInput(age=35, sex="Female"),
+            patient=CADPatientInput(age=35, sex="Female", consciousness="Alert"),
         )
         extracted = CADTriageMapper.extract_available_fields(payload)
         self.assertEqual(extracted["Condition"], "Infection")
         self.assertIsNone(extracted["Temperature"], "Temperature must NOT be fabricated as 38.5")
 
-    def test_15_prohibited_gcs_inference_from_consciousness(self):
+    def test_17_prohibited_gcs_inference_from_consciousness(self):
         """System strictly does NOT infer numeric GCS from qualitative consciousness."""
         for c_state in ["Alert", "Confused", "Drowsy", "Unconscious"]:
             payload = CADIntakePayload(
@@ -411,11 +638,11 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             self.assertIsNone(extracted["GCS"], f"GCS must NOT be inferred from consciousness {c_state}")
 
     # ==================================================================
-    # 4. ML BOUNDARY & ENDPOINT BEHAVIOR
+    # 6. ML BOUNDARY & ENDPOINT BEHAVIOR
     # ==================================================================
 
-    def test_16_ml_boundary_protected_model_invoked_on_verified_intake(self):
-        """Endpoint /cad/intake executes protected clinical model when vitals are provided."""
+    def test_18_ml_boundary_protected_model_invoked_on_verified_intake(self):
+        """Endpoint /cad/intake executes protected clinical model when vitals and confirmations are provided."""
         payload = {
             "external_incident_id": f"cad_verified_{time.time_ns()}",
             "source": "CAD_MOCK",
@@ -426,6 +653,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 "age": 65,
                 "sex": "Male",
                 "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "symptoms": {"chest_pain": True, "respiratory_distress": False, "pain_score": 8},
                 "medical_history": {"heart_disease": True, "hypertension": True},
                 "vitals": {
@@ -454,7 +682,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIn("confidence", data["result"]["patient"])
         self.assertGreater(data["result"]["patient"]["confidence"], 0.0)
 
-    def test_17_ml_boundary_distinct_verified_vitals_yield_distinct_predictions(self):
+    def test_19_ml_boundary_distinct_verified_vitals_yield_distinct_predictions(self):
         """Distinct verified clinical inputs yield distinct authoritative ML predictions."""
         # Critical presentation
         payload_crit = {
@@ -467,7 +695,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 "sex": "Male",
                 "consciousness": "Unconscious",
                 "symptoms": {"bleeding": True, "respiratory_distress": True, "pain_score": 10},
-                "injury": {"has_injury": True, "injury_type": "Internal Injury"},
+                "injury": {"injury_occurred": True, "injury_type": "Internal Injury"},
                 "vitals": {
                     "gcs": 4,
                     "spo2": 78.0,
@@ -500,6 +728,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 "age": 22,
                 "sex": "Female",
                 "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "symptoms": {"chest_pain": False, "respiratory_distress": False, "pain_score": 1},
                 "vitals": {
                     "gcs": 15,
@@ -525,7 +754,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
 
         self.assertNotEqual(crit_severity, mild_severity)
 
-    def test_18_endpoint_rejects_missing_clinical_measurements_with_422(self):
+    def test_20_endpoint_rejects_missing_clinical_measurements_with_422(self):
         """Incomplete CAD call (no vitals) is rejected with 422, stating exact missing fields."""
         payload_no_vitals = {
             "external_incident_id": f"cad_incomplete_{time.time_ns()}",
@@ -536,6 +765,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
                 "age": 55,
                 "sex": "Female",
                 "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
             },
         }
         res = self.client.post(
@@ -550,10 +780,10 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIn("strictly prohibits fabricating patient physiological measurements", detail)
 
     # ==================================================================
-    # 5. M2M AUTHENTICATION & PROVIDER SCOPING
+    # 7. M2M AUTHENTICATION & PROVIDER SCOPING
     # ==================================================================
 
-    def test_19_m2m_auth_valid_cad_credential_accepted(self):
+    def test_21_m2m_auth_valid_cad_credential_accepted(self):
         """Valid CAD M2M key succeeds with 200 OK on complete verified payload."""
         payload = {
             "external_incident_id": f"cad_auth_ok_{time.time_ns()}",
@@ -563,6 +793,8 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             "patient": {
                 "age": 50,
                 "sex": "Male",
+                "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "vitals": {
                     "heart_rate": 80.0, "spo2": 98.0, "systolic_bp": 120.0, "diastolic_bp": 80.0,
                     "respiratory_rate": 16.0, "temperature": 37.0, "gcs": 15, "blood_glucose": 100.0,
@@ -577,7 +809,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 200)
 
-    def test_20_m2m_auth_missing_credential_rejected(self):
+    def test_22_m2m_auth_missing_credential_rejected(self):
         """Unauthenticated request to /cad/intake is rejected with 401."""
         payload = {
             "external_incident_id": "cad_unauth",
@@ -593,7 +825,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         finally:
             settings.dev_auth_fallback = orig
 
-    def test_21_m2m_auth_invalid_credential_rejected(self):
+    def test_23_m2m_auth_invalid_credential_rejected(self):
         """Invalid API key to /cad/intake is rejected with 401."""
         payload = {
             "external_incident_id": "cad_invalid_key",
@@ -608,7 +840,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 401)
 
-    def test_22_m2m_auth_gps_credential_rejected(self):
+    def test_24_m2m_auth_gps_credential_rejected(self):
         """GPS key attempting to post to CAD intake is rejected with 403 Forbidden."""
         payload = {
             "external_incident_id": "cad_gps_mismatch",
@@ -624,7 +856,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertEqual(res.status_code, 403)
         self.assertIn("does not permit 'INCIDENT_CALL'", res.json()["detail"])
 
-    def test_23_m2m_auth_hospital_credential_rejected(self):
+    def test_25_m2m_auth_hospital_credential_rejected(self):
         """Hospital key attempting to post to CAD intake is rejected with 403 Forbidden."""
         payload = {
             "external_incident_id": "cad_hosp_mismatch",
@@ -640,7 +872,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertEqual(res.status_code, 403)
         self.assertIn("does not permit 'INCIDENT_CALL'", res.json()["detail"])
 
-    def test_24_m2m_auth_traffic_credential_rejected(self):
+    def test_26_m2m_auth_traffic_credential_rejected(self):
         """Traffic key attempting to post to CAD intake is rejected with 403 Forbidden."""
         payload = {
             "external_incident_id": "cad_traffic_mismatch",
@@ -656,7 +888,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertEqual(res.status_code, 403)
         self.assertIn("does not permit 'INCIDENT_CALL'", res.json()["detail"])
 
-    def test_25_m2m_auth_omni_credential_accepted(self):
+    def test_27_m2m_auth_omni_credential_accepted(self):
         """Omni key with all event scopes is accepted on CAD intake."""
         payload = {
             "external_incident_id": f"cad_omni_{time.time_ns()}",
@@ -666,6 +898,8 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             "patient": {
                 "age": 50,
                 "sex": "Male",
+                "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "vitals": {
                     "heart_rate": 80.0, "spo2": 98.0, "systolic_bp": 120.0, "diastolic_bp": 80.0,
                     "respiratory_rate": 16.0, "temperature": 37.0, "gcs": 15, "blood_glucose": 100.0,
@@ -680,7 +914,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 200)
 
-    def test_26_auth_operator_jwt_accepted(self):
+    def test_28_auth_operator_jwt_accepted(self):
         """Operator JWT token with dispatch permission is accepted on CAD intake."""
         payload = {
             "external_incident_id": f"cad_jwt_{time.time_ns()}",
@@ -690,6 +924,8 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             "patient": {
                 "age": 42,
                 "sex": "Female",
+                "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "vitals": {
                     "heart_rate": 84.0, "spo2": 97.0, "systolic_bp": 118.0, "diastolic_bp": 76.0,
                     "respiratory_rate": 18.0, "temperature": 36.9, "gcs": 15, "blood_glucose": 95.0,
@@ -705,10 +941,10 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
 
     # ==================================================================
-    # 6. IDEMPOTENCY
+    # 8. IDEMPOTENCY
     # ==================================================================
 
-    def test_27_idempotency_duplicate_cad_event_cached_without_mutation(self):
+    def test_29_idempotency_duplicate_cad_event_cached_without_mutation(self):
         """Submitting duplicate external CAD incident returns cached outcome with DUPLICATE status."""
         cad_id = f"cad_idem_test_{time.time_ns()}"
         payload = {
@@ -719,6 +955,8 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             "patient": {
                 "age": 60,
                 "sex": "Male",
+                "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "vitals": {
                     "heart_rate": 82.0, "spo2": 97.0, "systolic_bp": 122.0, "diastolic_bp": 82.0,
                     "respiratory_rate": 16.0, "temperature": 36.8, "gcs": 15, "blood_glucose": 105.0,
@@ -751,10 +989,10 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertEqual(data2["result"]["incident_id"], inc_id1)
 
     # ==================================================================
-    # 7. OBSERVABILITY & STATUS
+    # 9. OBSERVABILITY & STATUS
     # ==================================================================
 
-    def test_28_observability_cad_intake_metrics_recorded(self):
+    def test_30_observability_cad_intake_metrics_recorded(self):
         """Verify that accepted, rejected, and validation metrics are recorded."""
         snap_before = metrics_collector.get_snapshot()["cad_intake"]
 
@@ -767,6 +1005,8 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
             "patient": {
                 "age": 55,
                 "sex": "Female",
+                "consciousness": "Alert",
+                "injury": {"injury_occurred": False},
                 "vitals": {
                     "heart_rate": 75.0, "spo2": 99.0, "systolic_bp": 115.0, "diastolic_bp": 75.0,
                     "respiratory_rate": 14.0, "temperature": 36.7, "gcs": 15, "blood_glucose": 90.0,
@@ -811,7 +1051,7 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertGreater(snap_after["validation_failures_total"], snap_before["validation_failures_total"])
         self.assertGreater(snap_after["normalization_failures_total"], snap_before["normalization_failures_total"])
 
-    def test_29_observability_status_and_metrics_endpoints(self):
+    def test_31_observability_status_and_metrics_endpoints(self):
         """GET /ingestion/status and GET /metrics expose cad_intake data."""
         # /ingestion/status
         res_status = self.client.get(
@@ -833,10 +1073,10 @@ class TestM13Phase3RealisticCAD(unittest.TestCase):
         self.assertIn("cad_intake", data_metrics)
 
     # ==================================================================
-    # 8. BACKWARDS COMPATIBILITY
+    # 10. BACKWARDS COMPATIBILITY
     # ==================================================================
 
-    def test_30_backward_compatibility_cad_incident_endpoint_preserved(self):
+    def test_32_backward_compatibility_cad_incident_endpoint_preserved(self):
         """Existing /ingestion/cad/incident endpoint continues to function unchanged."""
         legacy_payload = {
             "source_event_id": f"cad_legacy_{time.time_ns()}",

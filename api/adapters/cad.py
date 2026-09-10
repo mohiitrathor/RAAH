@@ -60,6 +60,7 @@ class CADSymptoms(BaseModel):
     bleeding: Optional[bool] = Field(default=None, description="Active external bleeding reported")
     seizure: Optional[bool] = Field(default=None, description="Active or recent seizure activity")
     pain_score: Optional[int] = Field(default=None, ge=0, le=10, description="Caller-reported pain level (0-10)")
+    consciousness_status: Optional[str] = Field(default=None, description="Consciousness presentation")
 
 
 class CADMedicalHistory(BaseModel):
@@ -73,6 +74,7 @@ class CADMedicalHistory(BaseModel):
 class CADInjury(BaseModel):
     """Trauma and physical injury details."""
     has_injury: Optional[bool] = Field(default=None, description="Whether trauma/injury is present")
+    injury_occurred: Optional[bool] = Field(default=None, description="Whether trauma/injury occurred")
     injury_type: Optional[str] = Field(
         default=None,
         description="Burn | Fracture | Head Injury | Internal Injury | Laceration | No Injury",
@@ -439,7 +441,7 @@ class CADTriageMapper:
                 injury_type = "No Injury"
 
         if not injury_type:
-            if injury and injury.injury_occurred is False:
+            if injury and (injury.injury_occurred is False or injury.has_injury is False):
                 injury_type = "No Injury"
             elif norm_call_type in ("BURN", "BURNS"):
                 injury_type = "Burn"
