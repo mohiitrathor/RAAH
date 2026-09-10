@@ -4,7 +4,7 @@ import logging
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -360,3 +360,16 @@ if FRONTEND_DIR.exists():
         name="frontend",
     )
 
+
+# ==============================================================
+# ROOT REDIRECT
+# ==============================================================
+
+@app.get(
+    "/",
+    include_in_schema=False,
+    summary="Root redirect to Command Center dashboard",
+)
+def root_redirect():
+    """Redirect root path requests to the Command Center dashboard."""
+    return RedirectResponse(url="/dashboard/", status_code=307)

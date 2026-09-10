@@ -138,7 +138,7 @@ Once started, open your browser and navigate to:
 
 **`http://localhost:8000/`**
 
-The web interface will automatically connect to the real-time event stream (`/events/stream`) and display the live Tactical Operations Command Center.
+Visiting the root URL automatically redirects to `/dashboard/`, where the web interface connects to the real-time event stream (`/events/stream`) and displays the live Tactical Operations Command Center.
 
 ---
 
@@ -146,7 +146,8 @@ The web interface will automatically connect to the real-time event stream (`/ev
 
 | Endpoint | Method | Description |
 | :--- | :---: | :--- |
-| `http://localhost:8000/` | `GET` | Tactical Operations Command Center (Web UI) |
+| `http://localhost:8000/` | `GET` | Tactical Operations Command Center (redirects to `/dashboard/`) |
+| `http://localhost:8000/dashboard/` | `GET` | Tactical Operations Command Center (direct static mount) |
 | `http://localhost:8000/docs` | `GET` | Interactive OpenAPI Swagger UI documentation |
 | `http://localhost:8000/redoc` | `GET` | ReDoc API documentation |
 | `http://localhost:8000/health/live` | `GET` | Process liveness probe (lightweight health check) |
