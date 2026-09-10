@@ -7,7 +7,9 @@ from typing import Dict, List, Any
 from fastapi import APIRouter, HTTPException, Depends
 
 from Dispatch.scenarios.store import ReplayStore
+from Dispatch.scenarios.models import ReplayArtifact
 from Dispatch.scenarios.post_incident import PostIncidentReviewEngine
+from api.persistence.replay_compiler import resolve_replay_artifact
 from Dispatch.scenarios.regression import (
     RegressionSuite,
     RegressionStore,
@@ -30,6 +32,11 @@ regression_store = RegressionStore()
 regression_suite = RegressionSuite(store=regression_store)
 
 
+def _get_artifact(run_id: str) -> ReplayArtifact:
+    """Resolve replay artifact for either scenario runs or operational runs."""
+    return resolve_replay_artifact(run_id, not_found_msg=f"Replay run '{run_id}' not found.")
+
+
 # --------------------------------------------------------------------------
 # Post-Incident Review (PIR) Endpoints
 # --------------------------------------------------------------------------
@@ -37,10 +44,7 @@ regression_suite = RegressionSuite(store=regression_store)
 @router.get("/replays/{run_id}/pir", response_model=PostIncidentReviewResponse)
 def get_post_incident_review(run_id: str):
     """Retrieve full Post-Incident Review for a replay run."""
-    artifact = replay_store.get(run_id)
-    if not artifact:
-        raise HTTPException(status_code=404, detail=f"Replay run '{run_id}' not found.")
-
+    artifact = _get_artifact(run_id)
     pir = PostIncidentReviewEngine.generate_review(artifact)
     return pir.to_dict()
 
@@ -48,10 +52,7 @@ def get_post_incident_review(run_id: str):
 @router.get("/replays/{run_id}/findings")
 def get_pir_findings(run_id: str):
     """Retrieve operational findings identified for a replay run."""
-    artifact = replay_store.get(run_id)
-    if not artifact:
-        raise HTTPException(status_code=404, detail=f"Replay run '{run_id}' not found.")
-
+    artifact = _get_artifact(run_id)
     pir = PostIncidentReviewEngine.generate_review(artifact)
     return {
         "run_id": run_id,
@@ -64,10 +65,7 @@ def get_pir_findings(run_id: str):
 @router.get("/replays/{run_id}/root-causes")
 def get_pir_root_causes(run_id: str):
     """Retrieve causal graph and cascading failure chains for a replay run."""
-    artifact = replay_store.get(run_id)
-    if not artifact:
-        raise HTTPException(status_code=404, detail=f"Replay run '{run_id}' not found.")
-
+    artifact = _get_artifact(run_id)
     pir = PostIncidentReviewEngine.generate_review(artifact)
     return {
         "run_id": run_id,
@@ -80,10 +78,7 @@ def get_pir_root_causes(run_id: str):
 @router.post("/replays/{run_id}/pir/report", response_model=PIRReportResponse)
 def export_pir_report(run_id: str, req: PIRReportRequest):
     """Export PIR report in JSON, Markdown, or HTML format."""
-    artifact = replay_store.get(run_id)
-    if not artifact:
-        raise HTTPException(status_code=404, detail=f"Replay run '{run_id}' not found.")
-
+    artifact = _get_artifact(run_id)
     pir = PostIncidentReviewEngine.generate_review(artifact)
     report = PostIncidentReviewEngine.export_report(pir, format=req.format)
     return PIRReportResponse(
@@ -97,13 +92,8 @@ def export_pir_report(run_id: str, req: PIRReportRequest):
 @router.post("/replays/pir/compare", response_model=PIRCompareResponse)
 def compare_post_incident_reviews(req: PIRCompareRequest):
     """Compare two PIR evaluations to evaluate performance regressions or improvements."""
-    art_a = replay_store.get(req.run_id_a)
-    if not art_a:
-        raise HTTPException(status_code=404, detail=f"Replay run '{req.run_id_a}' not found.")
-
-    art_b = replay_store.get(req.run_id_b)
-    if not art_b:
-        raise HTTPException(status_code=404, detail=f"Replay run '{req.run_id_b}' not found.")
+    art_a = _get_artifact(req.run_id_a)
+    art_b = _get_artifact(req.run_id_b)
 
     pir_a = PostIncidentReviewEngine.generate_review(art_a)
     pir_b = PostIncidentReviewEngine.generate_review(art_b)

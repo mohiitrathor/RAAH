@@ -10,6 +10,16 @@
 import * as api from '../api.js';
 import { showToast } from './toasts.js';
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export class ScenarioAnalysisController {
   constructor(replayController) {
     this.replayCtrl = replayController;
@@ -251,46 +261,49 @@ export class ScenarioAnalysisController {
 
       this.dom.containerCompareResults.innerHTML = `
         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 11px; margin-top: 8px;">
-          <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">Differential: Scenario A vs Scenario B</div>
-          <div style="color: #cbd5e1; margin-bottom: 8px; font-style: italic;">"${res.performance_explanation}"</div>
+          <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Differential: Run A vs Run B</div>
+          <div style="color: #94a3b8; font-size: 10px; margin-bottom: 6px; padding: 4px 6px; background: rgba(30, 41, 59, 0.6); border-radius: 3px; border-left: 2px solid #38bdf8; line-height: 1.3;">
+            Descriptive Telemetry Differential — Compares observed historical metrics across two independent runs. Does not indicate counterfactual causality.
+          </div>
+          <div style="color: #cbd5e1; margin-bottom: 8px; font-style: italic;">"${escapeHtml(res.performance_explanation)}"</div>
           <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10px;">
             <thead>
               <tr style="border-bottom: 1px solid #475569; color: #94a3b8;">
                 <th style="padding: 3px 6px;">Metric</th>
-                <th style="padding: 3px 6px;">Scenario A</th>
-                <th style="padding: 3px 6px;">Scenario B</th>
+                <th style="padding: 3px 6px;">Run A</th>
+                <th style="padding: 3px 6px;">Run B</th>
                 <th style="padding: 3px 6px;">Delta</th>
               </tr>
             </thead>
             <tbody>
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 3px 6px; color: #94a3b8;">Casualties</td>
-                <td style="padding: 3px 6px;">${res.scenario_a.casualties}</td>
-                <td style="padding: 3px 6px;">${res.scenario_b.casualties}</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_a.casualties)}</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_b.casualties)}</td>
                 <td style="padding: 3px 6px; font-weight: 700;">${d.total_casualties > 0 ? '+' : ''}${d.total_casualties}</td>
               </tr>
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 3px 6px; color: #94a3b8;">Dispatch Success</td>
-                <td style="padding: 3px 6px;">${res.scenario_a.dispatch_success_pct}%</td>
-                <td style="padding: 3px 6px;">${res.scenario_b.dispatch_success_pct}%</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_a.dispatch_success_pct)}%</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_b.dispatch_success_pct)}%</td>
                 <td style="padding: 3px 6px; color: ${d.dispatch_success_pct >= 0 ? '#22c55e' : '#ef4444'}; font-weight: 700;">${d.dispatch_success_pct > 0 ? '+' : ''}${d.dispatch_success_pct}%</td>
               </tr>
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 3px 6px; color: #94a3b8;">Average ETA</td>
-                <td style="padding: 3px 6px;">${res.scenario_a.average_eta_minutes}m</td>
-                <td style="padding: 3px 6px;">${res.scenario_b.average_eta_minutes}m</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_a.average_eta_minutes)}m</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_b.average_eta_minutes)}m</td>
                 <td style="padding: 3px 6px; color: ${d.average_eta_minutes <= 0 ? '#22c55e' : '#ef4444'}; font-weight: 700;">${d.average_eta_minutes > 0 ? '+' : ''}${d.average_eta_minutes}m</td>
               </tr>
               <tr style="border-bottom: 1px solid #1e293b;">
                 <td style="padding: 3px 6px; color: #94a3b8;">Hosp. Saturation</td>
-                <td style="padding: 3px 6px;">${res.scenario_a.hospital_saturation_count}</td>
-                <td style="padding: 3px 6px;">${res.scenario_b.hospital_saturation_count}</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_a.hospital_saturation_count)}</td>
+                <td style="padding: 3px 6px;">${escapeHtml(res.scenario_b.hospital_saturation_count)}</td>
                 <td style="padding: 3px 6px; font-weight: 700;">${d.hospital_saturation_events > 0 ? '+' : ''}${d.hospital_saturation_events}</td>
               </tr>
               <tr>
                 <td style="padding: 3px 6px; color: #94a3b8;">Resilience Score</td>
-                <td style="padding: 3px 6px; font-weight: 700;">${res.scenario_a.resilience_score}</td>
-                <td style="padding: 3px 6px; font-weight: 700;">${res.scenario_b.resilience_score}</td>
+                <td style="padding: 3px 6px; font-weight: 700;">${escapeHtml(res.scenario_a.resilience_score)}</td>
+                <td style="padding: 3px 6px; font-weight: 700;">${escapeHtml(res.scenario_b.resilience_score)}</td>
                 <td style="padding: 3px 6px; font-weight: 800; color: ${d.resilience_score >= 0 ? '#22c55e' : '#ef4444'};">${d.resilience_score > 0 ? '+' : ''}${d.resilience_score}</td>
               </tr>
             </tbody>
@@ -298,7 +311,7 @@ export class ScenarioAnalysisController {
         </div>
       `;
     } catch (err) {
-      this.dom.containerCompareResults.innerHTML = `<div style="padding: 8px; color: #f87171; font-size: 11px;">Comparison failed: ${err.message}</div>`;
+      this.dom.containerCompareResults.innerHTML = `<div style="padding: 8px; color: #f87171; font-size: 11px;">Comparison failed: ${escapeHtml(err.message)}</div>`;
     }
   }
 
@@ -317,6 +330,9 @@ export class ScenarioAnalysisController {
       this.dom.containerBeforeAfterResults.innerHTML = `
         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-radius: 6px; padding: 8px; font-size: 11px; margin-top: 6px;">
           <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px;">Snapshot Delta: T+${tA}m -> T+${tB}m</div>
+          <div style="color: #94a3b8; font-size: 9px; margin-bottom: 6px; padding: 3px 5px; background: rgba(30, 41, 59, 0.6); border-radius: 3px; border-left: 2px solid #38bdf8; line-height: 1.3;">
+            Temporal State Delta — Summarizes net change in operational state across elapsed simulation time. It does not establish causal impact of an individual intervention.
+          </div>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 10px;">
             <div style="background: #090d16; padding: 4px; border-radius: 3px;">En Route: <b>${d.en_route_ambulances > 0 ? '+' : ''}${d.en_route_ambulances}</b></div>
             <div style="background: #090d16; padding: 4px; border-radius: 3px;">Arrived: <b>${d.arrived_ambulances > 0 ? '+' : ''}${d.arrived_ambulances}</b></div>

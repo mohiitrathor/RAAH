@@ -12,6 +12,16 @@
 import * as api from '../api.js';
 import { showToast } from './toasts.js';
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export class PIRController {
   constructor() {
     this.activeRunId = null;
@@ -72,9 +82,12 @@ export class PIRController {
       }
 
       replays.forEach((r, idx) => {
+        const isOp = (r.run_id && /^run_\d+$/.test(r.run_id)) || (r.scenario_id && r.scenario_id.startsWith('OPERATIONAL_RUN_'));
+        const prefix = isOp ? '[OPERATIONAL] ' : '[SCENARIO] ';
+        const dur = r.end_sim_time !== undefined ? `${r.end_sim_time}m` : (r.duration_minutes !== undefined ? `${r.duration_minutes}m` : 'N/A');
         const opt = document.createElement('option');
         opt.value = r.run_id;
-        opt.textContent = `${r.scenario_id} (${r.run_id.slice(0, 12)}) - ${r.duration_minutes}m`;
+        opt.textContent = `${prefix}${r.scenario_id || r.run_id} (${r.run_id.slice(0, 14)}) - ${dur}`;
         if (idx === 0) opt.selected = true;
         this.dom.selectPIRRun.appendChild(opt);
       });
@@ -154,8 +167,8 @@ export class PIRController {
       const bColor = n.severity === 'CRITICAL' ? '#ef4444' : '#f59e0b';
       html += `
         <div style="background: #1e293b; border: 1px solid ${bColor}; border-radius: 6px; padding: 6px 10px;">
-          <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">${n.category}</div>
-          <div style="font-weight: 700; color: #f1f5f9;">${n.label}</div>
+          <div style="font-size: 9px; color: #94a3b8; text-transform: uppercase;">${escapeHtml(n.category)}</div>
+          <div style="font-weight: 700; color: #f1f5f9;">${escapeHtml(n.label)}</div>
         </div>
       `;
       if (idx < g.nodes.length - 1) {
@@ -168,9 +181,10 @@ export class PIRController {
     if (cascades.length > 0) {
       html += `<div style="color: #f87171; font-weight: 700; font-size: 10px; margin-bottom: 4px;">Detected Cascading Sequences:</div>`;
       cascades.forEach((chain) => {
+        const safeChain = Array.isArray(chain) ? chain.map(escapeHtml).join(' ➔ ') : escapeHtml(chain);
         html += `
           <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; padding: 4px 8px; font-family: monospace; font-size: 10px; color: #fca5a5; margin-bottom: 4px;">
-            ${chain.join(' ➔ ')}
+            ${safeChain}
           </div>
         `;
       });
@@ -199,17 +213,18 @@ export class PIRController {
 
     this.dom.containerFindingsList.innerHTML = list.map(f => {
       const badgeColor = f.severity === 'CRITICAL' ? '#ef4444' : f.severity === 'WARNING' ? '#f59e0b' : '#38bdf8';
+      const causes = Array.isArray(f.potential_causes) ? f.potential_causes.map(escapeHtml).join(', ') : escapeHtml(f.potential_causes);
       return `
         <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <span style="font-weight: 700; color: #f1f5f9;">${f.title}</span>
+            <span style="font-weight: 700; color: #f1f5f9;">${escapeHtml(f.title)}</span>
             <span style="background: ${badgeColor}; color: #000; font-weight: 800; font-size: 9px; padding: 2px 6px; border-radius: 3px;">
-              ${f.severity}
+              ${escapeHtml(f.severity)}
             </span>
           </div>
-          <div style="color: #94a3b8; margin-bottom: 6px;">${f.description}</div>
-          <div style="color: #cbd5e1; font-size: 10px; margin-bottom: 4px;"><b>Impact:</b> ${f.measurable_impact}</div>
-          <div style="color: #64748b; font-size: 10px;"><b>Potential Causes:</b> ${f.potential_causes.join(', ')}</div>
+          <div style="color: #94a3b8; margin-bottom: 6px;">${escapeHtml(f.description)}</div>
+          <div style="color: #cbd5e1; font-size: 10px; margin-bottom: 4px;"><b>Impact:</b> ${escapeHtml(f.measurable_impact)}</div>
+          <div style="color: #64748b; font-size: 10px;"><b>Potential Causes:</b> ${causes}</div>
         </div>
       `;
     }).join('');
@@ -233,11 +248,11 @@ export class PIRController {
       return `
         <div style="background: rgba(15, 23, 42, 0.9); border-left: 3px solid ${pColor}; border-top: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-            <span style="font-weight: 700; color: #f1f5f9;">${r.issue}</span>
-            <span style="color: ${pColor}; font-weight: 800; font-size: 9px;">[${r.priority}]</span>
+            <span style="font-weight: 700; color: #f1f5f9;">${escapeHtml(r.issue)}</span>
+            <span style="color: ${pColor}; font-weight: 800; font-size: 9px;">[${escapeHtml(r.priority)}]</span>
           </div>
-          <div style="color: #7dd3fc; margin-bottom: 2px;"><b>Action:</b> ${r.action}</div>
-          <div style="color: #94a3b8; font-size: 10px;"><b>Expected Benefit:</b> ${r.expected_benefit}</div>
+          <div style="color: #7dd3fc; margin-bottom: 2px;"><b>Action:</b> ${escapeHtml(r.action)}</div>
+          <div style="color: #94a3b8; font-size: 10px;"><b>Expected Benefit:</b> ${escapeHtml(r.expected_benefit)}</div>
         </div>
       `;
     }).join('');

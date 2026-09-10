@@ -58,6 +58,7 @@ export class ReplayController {
       timelineList: document.getElementById('replay-timeline-list'),
       eventInspector: document.getElementById('replay-event-inspector'),
       selectFilterType: document.getElementById('select-replay-filter-type'),
+      inputFilterEntity: document.getElementById('input-replay-filter-entity'),
     };
   }
 
@@ -112,6 +113,10 @@ export class ReplayController {
     });
 
     this.dom.selectFilterType?.addEventListener('change', () => {
+      this.loadTimeline();
+    });
+
+    this.dom.inputFilterEntity?.addEventListener('input', () => {
       this.loadTimeline();
     });
   }
@@ -187,9 +192,14 @@ export class ReplayController {
   async loadTimeline() {
     if (!this.activeRunId) return;
     const filterType = this.dom.selectFilterType?.value || null;
+    const filterEntity = this.dom.inputFilterEntity?.value?.trim() || null;
 
     try {
-      const data = await api.getReplayTimeline(this.activeRunId, filterType === 'ALL' ? null : filterType);
+      const data = await api.getReplayTimeline(
+        this.activeRunId,
+        filterType === 'ALL' ? null : filterType,
+        filterEntity || null
+      );
       this.timelineEvents = data.events || [];
       this.renderTimeline();
     } catch (err) {
