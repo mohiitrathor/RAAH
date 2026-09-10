@@ -33,6 +33,19 @@ from api.adapters.service import (
     IngestionService,
     ingestion_service,
 )
+from api.adapters.m2m import (
+    M2MCredentialRecord,
+    M2MCredentialSummary,
+    IngestionIdentity,
+    M2MCredentialStore,
+    m2m_store,
+    require_ingestion_auth,
+    TEST_M2M_CAD_KEY,
+    TEST_M2M_GPS_KEY,
+    TEST_M2M_HOSPITAL_KEY,
+    TEST_M2M_TRAFFIC_KEY,
+    TEST_M2M_OMNI_KEY,
+)
 
 __all__ = [
     "NormalizedEvent",
@@ -55,4 +68,15 @@ __all__ = [
     "adapter_registry",
     "IngestionService",
     "ingestion_service",
+    "M2MCredentialRecord",
+    "M2MCredentialSummary",
+    "IngestionIdentity",
+    "M2MCredentialStore",
+    "m2m_store",
+    "require_ingestion_auth",
+    "TEST_M2M_CAD_KEY",
+    "TEST_M2M_GPS_KEY",
+    "TEST_M2M_HOSPITAL_KEY",
+    "TEST_M2M_TRAFFIC_KEY",
+    "TEST_M2M_OMNI_KEY",
 ]

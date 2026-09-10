@@ -66,6 +66,12 @@ class MetricsCollector:
         self._ingestion_latency_sum_ms: float = 0.0
         self._ingestion_latency_count: int = 0
 
+        # External Integration M2M Security metrics (M13.5 Phase 2)
+        self._m2m_auth_success_total: int = 0
+        self._m2m_auth_failure_total: int = 0
+        self._m2m_scope_mismatch_total: int = 0
+        self._m2m_rejections_by_provider: Dict[str, int] = {}
+
     def record_http_request(self, method: str, path: str, status_code: int, duration_ms: float):
         """Record an incoming HTTP request and response duration."""
         with self._lock:
@@ -175,6 +181,25 @@ class MetricsCollector:
                 self._ingestion_latency_sum_ms += duration_ms
                 self._ingestion_latency_count += 1
 
+    def record_m2m_auth_success(self, provider_id: str):
+        """Record a successful M2M external provider authentication."""
+        with self._lock:
+            self._m2m_auth_success_total += 1
+
+    def record_m2m_auth_failure(self):
+        """Record an unauthorized M2M API key attempt (invalid/unknown/revoked key)."""
+        with self._lock:
+            self._m2m_auth_failure_total += 1
+
+    def record_m2m_scope_mismatch(self, provider_id: str):
+        """Record an M2M provider scope violation (e.g. CAD attempting GPS)."""
+        with self._lock:
+            self._m2m_scope_mismatch_total += 1
+            pid = str(provider_id).upper()
+            self._m2m_rejections_by_provider[pid] = (
+                self._m2m_rejections_by_provider.get(pid, 0) + 1
+            )
+
     def get_snapshot(self) -> Dict[str, Any]:
         """Generate a complete operational metrics snapshot dictionary."""
         with self._lock:
@@ -253,6 +278,12 @@ class MetricsCollector:
                     "rejected_total": self._ingestion_rejected_total,
                     "stale_total": self._ingestion_stale_total,
                     "mean_latency_ms": round(mean_ingest_lat, 2),
+                },
+                "security": {
+                    "m2m_auth_success_total": self._m2m_auth_success_total,
+                    "m2m_auth_failure_total": self._m2m_auth_failure_total,
+                    "m2m_scope_mismatch_total": self._m2m_scope_mismatch_total,
+                    "m2m_rejections_by_provider": dict(self._m2m_rejections_by_provider),
                 },
             }
 

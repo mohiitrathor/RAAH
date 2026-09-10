@@ -6,9 +6,9 @@ Exposes authenticated, normalized REST endpoints for external CAD call intake,
 ambulance AVL/GPS telemetry, hospital status feeds, and traffic advisories.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, status
 
 from api.dependencies import manager
 from api.auth import (
@@ -26,7 +26,12 @@ from api.adapters import (
     EventType,
     ingestion_service,
     adapter_registry,
+    require_ingestion_auth,
+    IngestionIdentity,
+    m2m_store,
+    M2MCredentialSummary,
 )
+from api.observability.metrics import metrics_collector
 
 router = APIRouter(prefix="/ingestion", tags=["External Ingestion & CAD Adapters"])
 
@@ -44,9 +49,10 @@ router = APIRouter(prefix="/ingestion", tags=["External Ingestion & CAD Adapters
 def ingest_cad_incident(
     req: CADIncidentInput,
     x_correlation_id: Optional[str] = Header(default=None),
-    user: AuthenticatedUser = Depends(require_permission(Permission.INGEST_EMERGENCY)),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.INCIDENT_CALL, Permission.INGEST_EMERGENCY)),
 ):
     payload = req.model_dump()
+    role_val = auth.operator_user.role.value if auth.operator_user else None
     normalized = NormalizedEvent(
         event_type=EventType.INCIDENT_CALL.value,
         source=req.source,
@@ -54,10 +60,15 @@ def ingest_cad_incident(
         occurred_at=req.occurred_at or payload.pop("occurred_at", None),
         correlation_id=x_correlation_id or payload.get("correlation_id") or None,
         payload=payload,
-        metadata={"operator": user.username, "role": user.role.value},
+        metadata={
+            "operator": auth.attribution_name,
+            "auth_type": auth.auth_type,
+            "role": role_val,
+            "key_id": auth.identifier if auth.is_m2m else None,
+        },
     )
 
-    resp = ingestion_service.ingest_event(normalized, operator=user.username)
+    resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
     return resp
 
 
@@ -74,7 +85,7 @@ def ingest_cad_incident(
 def ingest_ambulance_gps(
     req: AmbulanceGPSInput,
     x_correlation_id: Optional[str] = Header(default=None),
-    user: AuthenticatedUser = Depends(require_permission(Permission.STANDARD_DISPATCH)),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.AMBULANCE_GPS, Permission.STANDARD_DISPATCH)),
 ):
     payload = req.model_dump()
     normalized = NormalizedEvent(
@@ -84,10 +95,14 @@ def ingest_ambulance_gps(
         occurred_at=req.occurred_at or payload.pop("occurred_at", None),
         correlation_id=x_correlation_id or None,
         payload=payload,
-        metadata={"operator": user.username},
+        metadata={
+            "operator": auth.attribution_name,
+            "auth_type": auth.auth_type,
+            "key_id": auth.identifier if auth.is_m2m else None,
+        },
     )
 
-    resp = ingestion_service.ingest_event(normalized, operator=user.username)
+    resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
     return resp
 
 
@@ -104,7 +119,7 @@ def ingest_ambulance_gps(
 def ingest_hospital_status(
     req: HospitalStatusInput,
     x_correlation_id: Optional[str] = Header(default=None),
-    user: AuthenticatedUser = Depends(require_permission(Permission.APPROVE_HOSPITAL_DIVERSION)),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.HOSPITAL_STATUS, Permission.APPROVE_HOSPITAL_DIVERSION)),
 ):
     payload = req.model_dump()
     normalized = NormalizedEvent(
@@ -114,10 +129,14 @@ def ingest_hospital_status(
         occurred_at=req.occurred_at or payload.pop("occurred_at", None),
         correlation_id=x_correlation_id or None,
         payload=payload,
-        metadata={"operator": user.username},
+        metadata={
+            "operator": auth.attribution_name,
+            "auth_type": auth.auth_type,
+            "key_id": auth.identifier if auth.is_m2m else None,
+        },
     )
 
-    resp = ingestion_service.ingest_event(normalized, operator=user.username)
+    resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
     return resp
 
 
@@ -134,7 +153,7 @@ def ingest_hospital_status(
 def ingest_traffic_update(
     req: TrafficUpdateInput,
     x_correlation_id: Optional[str] = Header(default=None),
-    user: AuthenticatedUser = Depends(require_permission(Permission.VIEW_LIVE)),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.TRAFFIC_UPDATE, Permission.VIEW_LIVE)),
 ):
     payload = req.model_dump()
     normalized = NormalizedEvent(
@@ -144,10 +163,14 @@ def ingest_traffic_update(
         occurred_at=req.occurred_at or payload.pop("occurred_at", None),
         correlation_id=x_correlation_id or None,
         payload=payload,
-        metadata={"operator": user.username},
+        metadata={
+            "operator": auth.attribution_name,
+            "auth_type": auth.auth_type,
+            "key_id": auth.identifier if auth.is_m2m else None,
+        },
     )
 
-    resp = ingestion_service.ingest_event(normalized, operator=user.username)
+    resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
     return resp
 
 
@@ -163,9 +186,16 @@ def ingest_traffic_update(
 )
 def ingest_generic_event(
     event: NormalizedEvent,
-    user: AuthenticatedUser = Depends(require_permission(Permission.INGEST_EMERGENCY)),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.INCIDENT_CALL, Permission.INGEST_EMERGENCY)),
 ):
-    resp = ingestion_service.ingest_event(event, operator=user.username)
+    if auth.is_m2m and not auth.allows_event_type(event.event_type):
+        metrics_collector.record_m2m_scope_mismatch(auth.provider_id or auth.identifier)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: M2M credential '{auth.identifier}' is not authorized for event type '{event.event_type}'.",
+        )
+
+    resp = ingestion_service.ingest_event(event, operator=auth.attribution_name)
     return resp
 
 
@@ -201,8 +231,26 @@ def get_idempotency_record(
 def get_ingestion_status(
     user: AuthenticatedUser = Depends(require_permission(Permission.VIEW_LIVE)),
 ):
+    metrics_snap = metrics_collector.get_snapshot()
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "metrics": ingestion_service.get_metrics(),
         "adapters": adapter_registry.health_check_all(),
+        "security": metrics_snap.get("security", {}),
     }
+
+
+# ======================================================================
+# 8. M2M CREDENTIAL MANAGEMENT (ADMINISTRATIVE)
+# ======================================================================
+
+@router.get(
+    "/m2m/credentials",
+    response_model=List[M2MCredentialSummary],
+    summary="List registered M2M credentials",
+    description="Lists safe public metadata of configured external provider credentials (secrets and hashes excluded).",
+)
+def list_m2m_credentials(
+    user: AuthenticatedUser = Depends(require_permission(Permission.USER_ADMINISTRATION)),
+):
+    return m2m_store.list_credentials()
