@@ -9,6 +9,7 @@ import { store } from '../state.js';
 import { tacticalMap } from '../map.js';
 import { showToast } from './toasts.js';
 import { confirmModal } from './confirmation_modal.js';
+import { openExplanationModal } from './explanation_modal.js';
 
 let drawerElement = null;
 let currentIncidentId = null;
@@ -71,7 +72,16 @@ async function renderDrawerContent(incident) {
   const ambulance = store.state.ambulances.get(String(incident.ambulance_id));
   const hospital = store.state.hospitals.get(String(incident.hospital_id));
 
-  // Fetch incident-specific decisions history
+  // Fetch incident-specific decision evidence (M13.3) and legacy decisions
+  let evidenceRecords = [];
+  let evidenceError = null;
+  try {
+    const evidenceRes = await api.getIncidentDecisionEvidence(incident.incident_id);
+    evidenceRecords = (evidenceRes && evidenceRes.records) ? evidenceRes.records : [];
+  } catch (err) {
+    evidenceError = err.message || 'Evidence service unavailable';
+  }
+
   let decisions = [];
   try {
     decisions = await api.getIncidentDecisions(incident.incident_id);
@@ -196,19 +206,53 @@ async function renderDrawerContent(incident) {
         `}
       </div>
 
-      <!-- Section 4: Redirection & Decision Audit Trail -->
+      <!-- Section 4: Decision Evidence & Audit Trail (M13.3) -->
       <div class="drawer-section">
         <div class="section-title">
           <i data-lucide="git-merge"></i>
-          <span>Redirection Audit Trail (${decisions.length})</span>
+          <span>Decision Evidence &amp; Audit Trail (${evidenceRecords.length || decisions.length})</span>
         </div>
-        ${decisions.length > 0 ? `
+        ${evidenceError ? `
+          <div class="evidence-error-box" style="padding: 8px; font-size: 11px;">
+            <span>Unable to load decision evidence from server. (${evidenceError})</span>
+          </div>
+        ` : (evidenceRecords.length > 0 ? `
+          <div class="decision-mini-list">
+            ${evidenceRecords.map(rec => {
+              const ev = rec.evidence;
+              const decType = ev.decision_type || 'DECISION';
+              const typeClass = `pill-${decType.toLowerCase().replace(/_/g, '-')}`;
+              const explanationPreview = rec.explanation || 'Operational decision executed';
+              return `
+                <div class="decision-mini-item" data-evidence-id="${ev.evidence_id}">
+                  <div class="decision-mini-header">
+                    <span class="decision-pill ${typeClass}">
+                      ${decType}
+                    </span>
+                    <span class="decision-time">T+${ev.sim_time}m</span>
+                  </div>
+                  <div class="decision-action-title font-mono" style="font-size: 11px; color: var(--text-primary); margin: 3px 0; font-weight: 600;">
+                    ${ev.action || 'DECISION'}
+                  </div>
+                  <div class="decision-reason" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;" title="${rec.explanation}">
+                    ${explanationPreview.length > 110 ? explanationPreview.substring(0, 107) + '...' : explanationPreview}
+                  </div>
+                  <div style="display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn-tactical btn-inspect-sm btn-inspect-evidence" data-evidence-id="${ev.evidence_id}">
+                      <i data-lucide="search" style="width: 12px; height: 12px;"></i> Inspect Rationale
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : (decisions.length > 0 ? `
           <div class="decision-mini-list">
             ${decisions.map(d => `
               <div class="decision-mini-item">
                 <div class="decision-mini-header">
-                  <span class="decision-pill ${d.reason.includes('[OPERATOR]') ? 'pill-operator' : 'pill-ai'}">
-                    ${d.reason.includes('[OPERATOR]') ? 'OPERATOR' : 'AI AUTO'}
+                  <span class="decision-pill ${d.reason && d.reason.includes('[OPERATOR]') ? 'pill-operator' : 'pill-ai'}">
+                    ${d.reason && d.reason.includes('[OPERATOR]') ? 'OPERATOR' : 'AI AUTO'}
                   </span>
                   <span class="decision-time">T+${d.time}m</span>
                 </div>
@@ -218,15 +262,14 @@ async function renderDrawerContent(incident) {
                   <strong>${d.new_hospital}</strong>
                 </div>
                 <div class="decision-reason">${d.reason}</div>
-                ${d.eta_saved !== null ? `
-                  <div class="decision-delta">ETA Saved: <strong>${d.eta_saved}m</strong> (${d.eta_before}m -> ${d.eta_after}m)</div>
-                ` : ''}
               </div>
             `).join('')}
           </div>
         ` : `
-          <div class="empty-placeholder" style="padding: 6px 0;">No redirection decisions for this incident. Initial dispatch route active.</div>
-        `}
+          <div class="empty-placeholder" style="padding: 8px 0; font-size: 11px;">
+            No decision evidence recorded for this incident. (Initial dispatch occurred prior to evidence recording or evidence unavailable).
+          </div>
+        `))}
       </div>
 
       <!-- Section 5: Operator Control Actions -->
@@ -252,6 +295,16 @@ async function renderDrawerContent(incident) {
 
   // Bind close button
   drawerElement.querySelector('.drawer-close-btn').addEventListener('click', closeIncidentDetail);
+
+  // Bind Inspect Rationale buttons (M13.3)
+  drawerElement.querySelectorAll('.btn-inspect-evidence').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const eid = btn.getAttribute('data-evidence-id');
+      const rec = evidenceRecords.find(r => r.evidence && r.evidence.evidence_id === eid);
+      openExplanationModal({ evidenceId: eid, explanationData: rec });
+    });
+  });
 
   // Bind Evaluate Reroute
   const btnEval = drawerElement.querySelector('#btn-eval-reroute');

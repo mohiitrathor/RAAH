@@ -931,25 +931,25 @@
         <div class="panel-header">
           <div class="panel-title">
             <i data-lucide="git-commit"></i>
-            <span>Redirection Audit Stream</span>
+            <span>Operational Decisions &amp; Audit Stream</span>
           </div>
-          <span id="redirection-count" class="ticker-label">0 Redirections</span>
+          <span id="redirection-count" class="ticker-label">0 Decisions</span>
         </div>
         <div class="table-container">
           <table class="tactical-table">
             <thead>
               <tr>
                 <th>Time</th>
+                <th>Type</th>
                 <th>Incident</th>
-                <th>Original</th>
-                <th>New Hospital</th>
-                <th>ETA Saved</th>
-                <th>Reason</th>
+                <th>Action</th>
+                <th>Summary / Details</th>
+                <th style="text-align: right;">Inspect</th>
               </tr>
             </thead>
             <tbody id="decisions-tbody">
               <tr>
-                <td colspan="6" class="empty-placeholder" style="padding: 10px;">No redirection decisions recorded yet.</td>
+                <td colspan="6" class="empty-placeholder" style="padding: 10px;">No operational decisions recorded yet.</td>
               </tr>
             </tbody>
           </table>
@@ -1020,7 +1020,11 @@
     </div>
   </div>
 
+  <!-- Decision Explanation Modal (M13.3) -->
+  <div id="modal-decision-explanation" class="modal-backdrop" style="display: none;"></div>
+
   <!-- Main ES Module Bootstrap -->
   <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/components/explanation_modal.js"></script>
 </body>
 </html>

@@ -341,3 +341,470 @@ main#command-workspace {
 .drawer-column:last-child {
   border-right: none;
 }
+
+/* ==============================================================
+   M13.3 PHASE 3: DECISION EXPLANATION & EVIDENCE AUDIT STYLES
+   ============================================================== */
+
+/* --- Decision Type Badges --- */
+.decision-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.decision-pill.pill-initial-dispatch {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.decision-pill.pill-hospital-redirection {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.decision-pill.pill-fleet-reposition {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+}
+
+.decision-pill.pill-hospital-diversion {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.decision-pill.pill-operator {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.decision-pill.pill-ai {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #818cf8;
+}
+
+/* --- Operational Decision Feed Rows & Inspect Action --- */
+.decision-feed-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.btn-inspect-sm {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--text-cyan);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-inspect-sm:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: var(--text-cyan);
+  color: #fff;
+}
+
+/* --- Explanation Modal Dialog --- */
+.explanation-modal-dialog {
+  max-width: 720px;
+  width: 92%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+}
+
+.tactical-scrollable {
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- Evidence Metadata Bar --- */
+.evidence-meta-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  background: #131d33;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.meta-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-bar-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.meta-bar-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* --- Rationale Highlight Box --- */
+.evidence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.evidence-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.evidence-section-title svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-cyan);
+}
+
+.explanation-highlight-box {
+  background: rgba(56, 189, 248, 0.06);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-left: 3px solid var(--text-cyan);
+  border-radius: 4px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+/* --- Clinical Factors Chips --- */
+.clinical-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.clinical-chip {
+  background: #141e33;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chip-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chip-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.highlight-severity {
+  color: #ef4444;
+}
+
+/* --- Selected Entities Grid --- */
+.entities-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.entity-card {
+  background: #141e33;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.entity-card-header {
+  background: #18233c;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.entity-card-header svg {
+  width: 13px;
+  height: 13px;
+  color: var(--text-cyan);
+}
+
+.entity-card-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.entity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.entity-row .lbl {
+  color: var(--text-muted);
+}
+
+.entity-row .val {
+  font-weight: 600;
+}
+
+.highlight-val {
+  color: var(--text-cyan);
+}
+
+/* --- Constraints List --- */
+.constraints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.constraint-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #141e33;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid var(--border-subtle);
+}
+
+.constraint-item.satisfied {
+  border-left: 3px solid #10b981;
+}
+
+.constraint-item.violated {
+  border-left: 3px solid #ef4444;
+}
+
+.constraint-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.constraint-item.satisfied .constraint-status svg {
+  color: #10b981;
+  width: 14px;
+  height: 14px;
+}
+
+.constraint-item.violated .constraint-status svg {
+  color: #ef4444;
+  width: 14px;
+  height: 14px;
+}
+
+.constraint-detail {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+/* --- Alternatives Table & Unavailable State --- */
+.alternatives-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+.alternatives-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.alternatives-table th {
+  background: #131d33;
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.alternatives-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #1a253c;
+}
+
+.row-selected {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.badge-selected {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.badge-discarded {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.alternatives-unavailable-box {
+  background: #131d33;
+  border: 1px dashed var(--border-active);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.alternatives-unavailable-box svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-cyan);
+  flex-shrink: 0;
+}
+
+/* --- Metadata Footer & Tags --- */
+.meta-tags-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  background: #141e33;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.evidence-meta-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.evidence-meta-footer .meta-item {
+  display: flex;
+  gap: 4px;
+}
+
+/* --- Loading / Error / Empty States --- */
+.evidence-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 36px 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(56, 189, 248, 0.2);
+  border-top-color: var(--text-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.evidence-error-box {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.evidence-error-box .error-msg {
+  color: #f87171;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.evidence-error-box .error-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.evidence-empty-box {
+  background: #131d33;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 4px;
+  padding: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}

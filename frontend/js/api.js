@@ -7,9 +7,12 @@ const BASE_URL = '';
 
 export async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`;
+  const token = typeof window !== 'undefined' && window.localStorage ? (localStorage.getItem('raah_token') || sessionStorage.getItem('raah_token')) : null;
+  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
   const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...options.headers,
     },
     ...options,
@@ -83,6 +86,16 @@ export const applyRedirection = (id, targetHospitalId = null, reason = "Operator
       reason: reason,
     }),
   });
+
+// --- Decision Evidence & Explanations (M13.3) ---
+export const getDecisionEvidence = (evidenceId) =>
+  request(`/decision-evidence/${encodeURIComponent(evidenceId)}`);
+
+export const getIncidentDecisionEvidence = (incidentId) =>
+  request(`/decision-evidence/incident/${encodeURIComponent(incidentId)}`);
+
+export const getRecentDecisionEvidence = (limit = 20) =>
+  request(`/decision-evidence/recent?limit=${encodeURIComponent(limit)}`);
 
 // --- Events ---
 export const getPendingEvents = () => request('/events/pending');
