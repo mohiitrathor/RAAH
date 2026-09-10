@@ -24,6 +24,16 @@ from api.persistence.serializer import (
 from api.persistence.sqlite_store import SQLiteStateStore
 from api.persistence.recovery import StateRecoveryEngine, RecoveryStatus
 from api.persistence.bridge import persistence_bridge
+from api.persistence.replay_compiler import (
+    OperationalReplayCompiler,
+    compile_operational_run_to_artifact,
+    ReplayCompilationError,
+    RunNotFoundError,
+    NoCheckpointsError,
+    CorruptCheckpointError as ReplayCorruptCheckpointError,
+    MalformedPersistenceError,
+    EmptyRunError,
+)
 
 __all__ = [
     "StatePersistenceStore",
@@ -44,4 +54,13 @@ __all__ = [
     "CorruptStateError",
     "DatabaseUnavailableError",
     "DatabaseLockedError",
+    "OperationalReplayCompiler",
+    "compile_operational_run_to_artifact",
+    "ReplayCompilationError",
+    "RunNotFoundError",
+    "NoCheckpointsError",
+    "ReplayCorruptCheckpointError",
+    "MalformedPersistenceError",
+    "EmptyRunError",
 ]
+
