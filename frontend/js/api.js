@@ -184,6 +184,10 @@ export const getReplayAnalysis = (runId) =>
   request(`/replays/${runId}/analysis`);
 export const seekReplayState = (runId, simTime, sessionId = 'default') =>
   request(`/replays/${runId}/state/${simTime}?session_id=${sessionId}`);
+export const stepReplay = (runId) =>
+  request(`/replays/${runId}/step`, {
+    method: 'POST',
+  });
 export const compareScenarios = (runIdA, runIdB) =>
   request('/replays/compare', {
     method: 'POST',

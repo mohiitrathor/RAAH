@@ -139,13 +139,21 @@ export class ScenarioAnalysisController {
       }
 
       replays.forEach((rep) => {
+        const isOp = (rep.run_id && /^run_\d+$/.test(rep.run_id)) || (rep.scenario_id && rep.scenario_id.startsWith('OPERATIONAL_RUN_'));
+        const typeBadge = isOp
+          ? '<span style="background: #0284c7; color: white; font-size: 8px; padding: 1px 4px; border-radius: 2px; font-weight: 700; margin-right: 4px; display: inline-block;">HISTORICAL OPERATIONAL RUN</span>'
+          : '<span style="background: #e11d48; color: white; font-size: 8px; padding: 1px 4px; border-radius: 2px; font-weight: 700; margin-right: 4px; display: inline-block;">SCENARIO REPLAY</span>';
+        const duration = rep.end_sim_time !== undefined ? `${rep.end_sim_time}m` : (rep.duration_minutes !== undefined ? `${rep.duration_minutes}m` : 'N/A');
+        const evCount = rep.event_count !== undefined ? `${rep.event_count} ev` : (rep.total_events !== undefined ? `${rep.total_events} ev` : 'N/A');
+        const hashDisplay = rep.deterministic_hash ? rep.deterministic_hash.slice(0, 12) : (isOp ? 'IMMUTABLE_RUN' : '-');
+
         const tr = document.createElement('tr');
         tr.style.cssText = 'border-bottom: 1px solid #1e293b; font-size: 11px;';
         tr.innerHTML = `
-          <td style="padding: 6px 8px; font-weight: 700; color: #38bdf8;">${rep.scenario_id}</td>
+          <td style="padding: 6px 8px; font-weight: 700; color: #38bdf8;">${typeBadge}${rep.scenario_id || rep.run_id}</td>
           <td style="padding: 6px 8px; font-family: monospace; color: #94a3b8;">${rep.run_id.slice(0, 14)}</td>
-          <td style="padding: 6px 8px; color: #f1f5f9;">${rep.duration_minutes}m (${rep.total_events} ev)</td>
-          <td style="padding: 6px 8px; font-family: monospace; color: #a5f3fc; font-size: 10px;">${rep.deterministic_hash ? rep.deterministic_hash.slice(0, 12) : '-'}</td>
+          <td style="padding: 6px 8px; color: #f1f5f9;">${duration} (${evCount})</td>
+          <td style="padding: 6px 8px; font-family: monospace; color: #a5f3fc; font-size: 10px;">${hashDisplay}</td>
           <td style="padding: 6px 8px; text-align: right;">
             <button class="btn-tactical btn-xs btn-open-rep" data-runid="${rep.run_id}" style="padding: 2px 6px; font-size: 10px; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #7dd3fc;">
               Open

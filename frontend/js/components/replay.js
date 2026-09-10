@@ -11,6 +11,20 @@
 
 import * as api from '../api.js';
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function isOperationalRun(runId) {
+  return typeof runId === 'string' && /^run_\d+$/.test(runId);
+}
+
 export class ReplayController {
   constructor() {
     this.activeRunId = null;
@@ -116,7 +130,11 @@ export class ReplayController {
       replays.forEach((r, idx) => {
         const opt = document.createElement('option');
         opt.value = r.run_id;
-        opt.textContent = `${r.scenario_id} (${r.run_id.slice(0, 14)}) - ${r.duration_minutes}m`;
+        const isOp = isOperationalRun(r.run_id) || (r.scenario_id && r.scenario_id.startsWith('OPERATIONAL_RUN_'));
+        const typeLabel = isOp ? '[HISTORICAL OPERATIONAL RUN]' : '[SCENARIO REPLAY]';
+        const duration = r.end_sim_time !== undefined ? `${r.end_sim_time}m` : (r.duration_minutes !== undefined ? `${r.duration_minutes}m` : 'N/A');
+        const evCount = r.event_count !== undefined ? `${r.event_count} ev` : (r.total_events !== undefined ? `${r.total_events} ev` : 'N/A');
+        opt.textContent = `${typeLabel} ${r.scenario_id || r.run_id} (${r.run_id}) - ${duration} (${evCount})`;
         if (idx === 0) opt.selected = true;
         this.dom.selectReplay.appendChild(opt);
       });
@@ -126,6 +144,9 @@ export class ReplayController {
       }
     } catch (err) {
       console.warn('Failed to load replays list:', err);
+      if (this.dom.selectReplay) {
+        this.dom.selectReplay.innerHTML = '<option value="">Failed to load replays (check authorization or server)</option>';
+      }
     }
   }
 
@@ -133,11 +154,18 @@ export class ReplayController {
     if (!runId) return;
     this.pause();
     this.activeRunId = runId;
+    this.isOperational = isOperationalRun(runId);
     this.currentSimTime = 0;
 
     try {
-      const analysis = await api.getReplayAnalysis(runId);
-      this.maxSimTime = analysis.duration || 15;
+      let duration = 15;
+      try {
+        const analysis = await api.getReplayAnalysis(runId);
+        duration = analysis.duration || 15;
+      } catch (analysisErr) {
+        console.warn('Could not fetch replay analysis, seeking t=0 directly:', analysisErr);
+      }
+      this.maxSimTime = duration;
       if (this.dom.sliderSeek) {
         this.dom.sliderSeek.max = this.maxSimTime;
         this.dom.sliderSeek.value = 0;
@@ -147,6 +175,12 @@ export class ReplayController {
       this.updateHeaderUI();
     } catch (err) {
       console.error('Error loading replay:', err);
+      if (this.dom.modeBanner) {
+        this.dom.modeBanner.innerHTML = `
+          <span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 3px; font-weight: 800; font-size: 10px;">REPLAY ERROR</span>
+          <span style="color: #f87171; font-size: 11px;">Failed to load replay ${escapeHtml(runId)}. Data may be missing or corrupt.</span>
+        `;
+      }
     }
   }
 
@@ -160,6 +194,9 @@ export class ReplayController {
       this.renderTimeline();
     } catch (err) {
       console.warn('Failed to load timeline:', err);
+      if (this.dom.timelineList) {
+        this.dom.timelineList.innerHTML = '<div style="padding: 10px; color: #f87171; font-size: 11px;">Failed to load timeline.</div>';
+      }
     }
   }
 
@@ -168,7 +205,7 @@ export class ReplayController {
     this.dom.timelineList.innerHTML = '';
 
     if (this.timelineEvents.length === 0) {
-      this.dom.timelineList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 11px;">No matching events.</div>';
+      this.dom.timelineList.innerHTML = '<div style="padding: 10px; color: #64748b; font-size: 11px;">No matching events recorded.</div>';
       return;
     }
 
@@ -187,15 +224,17 @@ export class ReplayController {
         ev.event_type === 'MCI_DECLARED' ? '#ef4444' :
         ev.event_type === 'DISPATCH' ? '#38bdf8' :
         ev.event_type === 'AMBULANCE_ARRIVED' ? '#22c55e' :
-        ev.event_type === 'REDIRECTION' ? '#f59e0b' : '#94a3b8';
+        ev.event_type === 'REDIRECTION' ? '#f59e0b' :
+        ev.event_type === 'REPOSITION_START' ? '#c084fc' :
+        ev.event_type === 'HOSPITAL_SATURATED' ? '#f43f5e' : '#94a3b8';
 
       item.innerHTML = `
-        <span style="font-family: monospace; color: #94a3b8; font-size: 10px; min-width: 42px;">T+${ev.sim_time}m</span>
+        <span style="font-family: monospace; color: #94a3b8; font-size: 10px; min-width: 42px;">T+${escapeHtml(ev.sim_time)}m</span>
         <span style="background: ${badgeColor}; color: #000; font-weight: 700; font-size: 9px; padding: 1px 4px; border-radius: 3px;">
-          ${ev.event_type.slice(0, 10)}
+          ${escapeHtml(ev.event_type ? ev.event_type.slice(0, 12) : 'EVENT')}
         </span>
         <span style="color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${ev.description}
+          ${escapeHtml(ev.description || 'Recorded telemetry event')}
         </span>
       `;
 
@@ -216,21 +255,36 @@ export class ReplayController {
       const ev = await api.getReplayEventDetail(this.activeRunId, eventIndex);
       if (!this.dom.eventInspector) return;
 
+      const isOp = isOperationalRun(this.activeRunId);
+      const evidenceDisclaimer = isOp
+        ? `<div style="margin-top: 8px; padding: 6px 8px; background: rgba(30, 41, 59, 0.6); border-left: 3px solid #64748b; border-radius: 4px; font-size: 10px; color: #94a3b8;">
+             <span style="font-weight: 600; color: #cbd5e1;">Decision Evidence:</span> Decision evidence was not recorded for this historical run.
+           </div>`
+        : '';
+
       this.dom.eventInspector.innerHTML = `
         <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
-            <span style="font-weight: 700; color: #38bdf8;">${ev.event_type}</span>
-            <span style="color: #94a3b8; font-family: monospace;">T+${ev.sim_time} min</span>
+            <span style="font-weight: 700; color: #38bdf8;">${escapeHtml(ev.event_type)}</span>
+            <span style="color: #94a3b8; font-family: monospace;">T+${escapeHtml(ev.sim_time)} min</span>
           </div>
-          <div style="color: #f1f5f9; margin-bottom: 8px;">${ev.description}</div>
+          <div style="color: #f1f5f9; margin-bottom: 8px;">${escapeHtml(ev.description)}</div>
           <div style="color: #94a3b8; font-size: 10px; margin-bottom: 4px; text-transform: uppercase;">Affected Entities</div>
-          <pre style="background: #090d16; padding: 6px; border-radius: 4px; color: #a5f3fc; font-size: 10px; margin: 0 0 6px 0; overflow-x: auto;">${JSON.stringify(ev.entity_ids, null, 2)}</pre>
+          <pre style="background: #090d16; padding: 6px; border-radius: 4px; color: #a5f3fc; font-size: 10px; margin: 0 0 6px 0; overflow-x: auto;">${escapeHtml(JSON.stringify(ev.entity_ids || {}, null, 2))}</pre>
           <div style="color: #94a3b8; font-size: 10px; margin-bottom: 4px; text-transform: uppercase;">Specialized Detail</div>
-          <pre style="background: #090d16; padding: 6px; border-radius: 4px; color: #fde047; font-size: 10px; margin: 0; overflow-x: auto;">${JSON.stringify(ev.detail, null, 2)}</pre>
+          <pre style="background: #090d16; padding: 6px; border-radius: 4px; color: #fde047; font-size: 10px; margin: 0; overflow-x: auto;">${escapeHtml(JSON.stringify(ev.detail || {}, null, 2))}</pre>
+          ${evidenceDisclaimer}
         </div>
       `;
     } catch (err) {
       console.warn('Failed to inspect event:', err);
+      if (this.dom.eventInspector) {
+        this.dom.eventInspector.innerHTML = `
+          <div style="padding: 10px; color: #f87171; font-size: 11px;">
+            Failed to load event details.
+          </div>
+        `;
+      }
     }
   }
 
@@ -253,8 +307,25 @@ export class ReplayController {
     }
   }
 
-  step(delta) {
+  async step(delta) {
     this.pause();
+    if (delta > 0 && this.activeRunId) {
+      try {
+        const state = await api.stepReplay(this.activeRunId);
+        if (state && state.sim_time !== undefined) {
+          this.currentSimTime = state.sim_time;
+          if (this.dom.sliderSeek) {
+            this.dom.sliderSeek.value = state.sim_time;
+          }
+          this.renderMapState(state);
+          this.updateHeaderUI();
+          this.renderTimeline();
+          return;
+        }
+      } catch (err) {
+        console.warn('Server step failed, falling back to seek:', err);
+      }
+    }
     this.seek(this.currentSimTime + delta);
   }
 
@@ -293,9 +364,12 @@ export class ReplayController {
     }
     if (this.dom.modeBanner) {
       const statusText = this.isPlaying ? 'PLAYING' : 'PAUSED';
+      const isOp = isOperationalRun(this.activeRunId);
+      const modeLabel = isOp ? 'HISTORICAL REPLAY' : 'SCENARIO REPLAY';
+      const badgeBg = isOp ? '#0284c7' : '#e11d48';
       this.dom.modeBanner.innerHTML = `
-        <span style="background: #e11d48; color: white; padding: 2px 6px; border-radius: 3px; font-weight: 800; font-size: 10px;">REPLAY MODE</span>
-        <span style="color: #94a3b8; font-size: 11px;">Run: <b>${(this.activeRunId || 'None').slice(0, 16)}</b> | Time: <b>T+${this.currentSimTime}m</b> | Status: <b>${statusText}</b></span>
+        <span style="background: ${badgeBg}; color: white; padding: 2px 6px; border-radius: 3px; font-weight: 800; font-size: 10px;">${escapeHtml(modeLabel)}</span>
+        <span style="color: #94a3b8; font-size: 11px;">Run: <b style="color: #f1f5f9;">${escapeHtml((this.activeRunId || 'None').slice(0, 16))}</b> | Time: <b style="color: #38bdf8;">T+${this.currentSimTime}m</b> | Status: <b>${statusText}</b></span>
       `;
     }
   }
