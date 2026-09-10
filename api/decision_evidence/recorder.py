@@ -129,7 +129,7 @@ class EvidenceStore:
                 constraints.append(
                     ConstraintEvaluation(
                         name="HOSPITAL_SUITABILITY",
-                        satisfied=bool(suitability == 1),
+                        satisfied=bool(suitability and suitability >= 1),
                         details=f"Available Beds: {beds}, Available ICU: {icu}",
                     )
                 )

@@ -12,7 +12,7 @@ import {
   getActiveMCIs,
   declareMCI,
 } from '../api.js';
-import { showToast } from './toast.js';
+import { showToast } from './toasts.js';
 import { tacticalMap } from '../map.js';
 
 class CoordinationComponent {

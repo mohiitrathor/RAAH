@@ -202,7 +202,7 @@ function initRealtimeStream() {
             store.addActivityEntry({
               type: 'DISPATCH',
               badge: 'DISPATCH',
-              time: event.payload.time !== undefined ? event.payload.time : store.state.simTime,
+              time: event.simulation_time ?? event.payload.time ?? store.state.simTime,
               message: `Ambulance ${ambId} dispatched to Incident #${event.payload.incident_id} → ${hospId}`,
               incident_id: event.payload.incident_id,
               details: event.payload,
