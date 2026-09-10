@@ -72,6 +72,12 @@ class MetricsCollector:
         self._m2m_scope_mismatch_total: int = 0
         self._m2m_rejections_by_provider: Dict[str, int] = {}
 
+        # External CAD Intake metrics (M13.5 Phase 3)
+        self._cad_intake_accepted_total: int = 0
+        self._cad_intake_rejected_total: int = 0
+        self._cad_intake_normalization_failures_total: int = 0
+        self._cad_intake_validation_failures_total: int = 0
+
     def record_http_request(self, method: str, path: str, status_code: int, duration_ms: float):
         """Record an incoming HTTP request and response duration."""
         with self._lock:
@@ -200,6 +206,27 @@ class MetricsCollector:
                 self._m2m_rejections_by_provider.get(pid, 0) + 1
             )
 
+    # CAD Intake Telemetry Methods (M13.5 Phase 3)
+    def record_cad_intake_accepted(self):
+        """Record an accepted realistic CAD intake incident."""
+        with self._lock:
+            self._cad_intake_accepted_total += 1
+
+    def record_cad_intake_rejected(self):
+        """Record a rejected realistic CAD intake incident."""
+        with self._lock:
+            self._cad_intake_rejected_total += 1
+
+    def record_cad_intake_normalization_failure(self):
+        """Record a failure during CAD payload normalization / clinical translation."""
+        with self._lock:
+            self._cad_intake_normalization_failures_total += 1
+
+    def record_cad_intake_validation_failure(self):
+        """Record a failure during CAD schema validation (e.g. malformed coordinates/timestamp)."""
+        with self._lock:
+            self._cad_intake_validation_failures_total += 1
+
     def get_snapshot(self) -> Dict[str, Any]:
         """Generate a complete operational metrics snapshot dictionary."""
         with self._lock:
@@ -278,6 +305,16 @@ class MetricsCollector:
                     "rejected_total": self._ingestion_rejected_total,
                     "stale_total": self._ingestion_stale_total,
                     "mean_latency_ms": round(mean_ingest_lat, 2),
+                    "cad_intake_accepted_total": self._cad_intake_accepted_total,
+                    "cad_intake_rejected_total": self._cad_intake_rejected_total,
+                    "cad_intake_normalization_failures_total": self._cad_intake_normalization_failures_total,
+                    "cad_intake_validation_failures_total": self._cad_intake_validation_failures_total,
+                },
+                "cad_intake": {
+                    "accepted_total": self._cad_intake_accepted_total,
+                    "rejected_total": self._cad_intake_rejected_total,
+                    "normalization_failures_total": self._cad_intake_normalization_failures_total,
+                    "validation_failures_total": self._cad_intake_validation_failures_total,
                 },
                 "security": {
                     "m2m_auth_success_total": self._m2m_auth_success_total,

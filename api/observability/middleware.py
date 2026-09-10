@@ -67,6 +67,8 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
             try:
                 from api.observability.metrics import metrics_collector
                 metrics_collector.record_http_request(method, path, response.status_code, duration_ms)
+                if path == "/ingestion/cad/intake" and response.status_code == 422:
+                    metrics_collector.record_cad_intake_validation_failure()
             except Exception:
                 pass
 

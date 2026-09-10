@@ -46,6 +46,18 @@ from api.adapters.m2m import (
     TEST_M2M_TRAFFIC_KEY,
     TEST_M2M_OMNI_KEY,
 )
+from api.adapters.cad import (
+    CADNormalizationError,
+    CADLocationInput,
+    CADCallerInfo,
+    CADSymptoms,
+    CADMedicalHistory,
+    CADInjury,
+    CADVitals,
+    CADPatientInput,
+    CADIntakePayload,
+    CADTriageMapper,
+)
 
 __all__ = [
     "NormalizedEvent",
@@ -79,4 +91,14 @@ __all__ = [
     "TEST_M2M_HOSPITAL_KEY",
     "TEST_M2M_TRAFFIC_KEY",
     "TEST_M2M_OMNI_KEY",
+    "CADNormalizationError",
+    "CADLocationInput",
+    "CADCallerInfo",
+    "CADSymptoms",
+    "CADMedicalHistory",
+    "CADInjury",
+    "CADVitals",
+    "CADPatientInput",
+    "CADIntakePayload",
+    "CADTriageMapper",
 ]

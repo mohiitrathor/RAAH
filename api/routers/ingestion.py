@@ -30,6 +30,9 @@ from api.adapters import (
     IngestionIdentity,
     m2m_store,
     M2MCredentialSummary,
+    CADIntakePayload,
+    CADTriageMapper,
+    CADNormalizationError,
 )
 from api.observability.metrics import metrics_collector
 
@@ -69,6 +72,58 @@ def ingest_cad_incident(
     )
 
     resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
+    return resp
+
+
+# ======================================================================
+# 1B. REALISTIC EXTERNAL CAD INTAKE & TRIAGE NORMALIZATION
+# ======================================================================
+
+@router.post(
+    "/cad/intake",
+    response_model=IngestionResponse,
+    summary="Ingest realistic external CAD incident",
+    description="Accept realistic CAD emergency incident payload, normalize and triage into RAAH clinical ML contract, and execute authoritative dispatch.",
+)
+def ingest_realistic_cad(
+    req: CADIntakePayload,
+    x_correlation_id: Optional[str] = Header(default=None),
+    auth: IngestionIdentity = Depends(require_ingestion_auth(EventType.INCIDENT_CALL, Permission.INGEST_EMERGENCY)),
+):
+    try:
+        mapped_internal = CADTriageMapper.normalize(req)
+    except CADNormalizationError as norm_err:
+        metrics_collector.record_cad_intake_normalization_failure()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"CAD normalization failed: {norm_err}",
+        )
+
+    role_val = auth.operator_user.role.value if auth.operator_user else None
+    normalized = NormalizedEvent(
+        event_type=EventType.INCIDENT_CALL.value,
+        source=req.source,
+        source_event_id=req.external_incident_id,
+        occurred_at=req.occurred_at,
+        correlation_id=x_correlation_id or None,
+        payload=mapped_internal,
+        metadata={
+            "operator": auth.attribution_name,
+            "auth_type": auth.auth_type,
+            "role": role_val,
+            "key_id": auth.identifier if auth.is_m2m else None,
+            "external_incident_id": req.external_incident_id,
+            "call_type": req.call_type,
+            "intake_mode": "realistic_cad_v1",
+        },
+    )
+
+    resp = ingestion_service.ingest_event(normalized, operator=auth.attribution_name)
+    if resp.status.value in ("ACCEPTED", "DUPLICATE"):
+        metrics_collector.record_cad_intake_accepted()
+    else:
+        metrics_collector.record_cad_intake_rejected()
+
     return resp
 
 
@@ -237,6 +292,7 @@ def get_ingestion_status(
         "metrics": ingestion_service.get_metrics(),
         "adapters": adapter_registry.health_check_all(),
         "security": metrics_snap.get("security", {}),
+        "cad_intake": metrics_snap.get("cad_intake", {}),
     }
 
 
