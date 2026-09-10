@@ -116,11 +116,46 @@ class AdapterRegistry:
         ]:
             if provider is not None:
                 try:
-                    checks[name] = provider.health_check()
+                    res = provider.health_check()
+                    is_healthy = bool(res.get("healthy", False))
+                    status = "HEALTHY" if is_healthy else "DISCONNECTED"
+                    res["status"] = status
+                    res.setdefault("type", name.upper())
+                    checks[name] = res
+                except TimeoutError as ex:
+                    checks[name] = {
+                        "provider_id": getattr(provider, "provider_id", f"{name.upper()}_PROVIDER"),
+                        "type": name.upper(),
+                        "healthy": False,
+                        "status": "DEGRADED",
+                        "error": str(ex),
+                    }
+                except ConnectionError as ex:
+                    checks[name] = {
+                        "provider_id": getattr(provider, "provider_id", f"{name.upper()}_PROVIDER"),
+                        "type": name.upper(),
+                        "healthy": False,
+                        "status": "DISCONNECTED",
+                        "error": str(ex),
+                    }
                 except Exception as ex:
-                    checks[name] = {"healthy": False, "error": str(ex)}
+                    err_msg = str(ex)
+                    status = "DEGRADED" if "timeout" in err_msg.lower() else "DISCONNECTED"
+                    checks[name] = {
+                        "provider_id": getattr(provider, "provider_id", f"{name.upper()}_PROVIDER"),
+                        "type": name.upper(),
+                        "healthy": False,
+                        "status": status,
+                        "error": err_msg,
+                    }
             else:
-                checks[name] = {"healthy": False, "error": "Provider not configured"}
+                checks[name] = {
+                    "provider_id": f"{name.upper()}_UNCONFIGURED",
+                    "type": name.upper(),
+                    "healthy": False,
+                    "status": "NOT_CONFIGURED",
+                    "error": "Provider not configured",
+                }
 
         overall_healthy = all(c.get("healthy", False) for c in checks.values())
         return {

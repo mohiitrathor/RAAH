@@ -457,5 +457,5 @@ export function connectEventStream({
   };
 }
 
-
-
+// --- External Ingestion & Integration Health (M13.5 Phase 1) ---
+export const getIngestionStatus = () => request('/ingestion/status');

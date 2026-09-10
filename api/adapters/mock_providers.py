@@ -47,6 +47,10 @@ class MockCADProvider(IncidentSource):
         return True
 
     def health_check(self) -> Dict[str, Any]:
+        if self.simulate_timeout:
+            raise TimeoutError("CAD provider connection timed out.")
+        if not self.is_healthy:
+            raise ConnectionError("CAD provider is unreachable.")
         return {
             "provider_id": self.provider_id,
             "type": "CAD",
@@ -78,6 +82,10 @@ class MockGPSProvider(LocationSource):
         return events
 
     def health_check(self) -> Dict[str, Any]:
+        if self.simulate_timeout:
+            raise TimeoutError("GPS provider connection timed out.")
+        if not self.is_healthy:
+            raise ConnectionError("GPS provider is unreachable.")
         return {
             "provider_id": self.provider_id,
             "type": "GPS",
@@ -108,6 +116,10 @@ class MockHospitalProvider(HospitalStatusSource):
         return events
 
     def health_check(self) -> Dict[str, Any]:
+        if self.simulate_timeout:
+            raise TimeoutError("Hospital status provider connection timed out.")
+        if not self.is_healthy:
+            raise ConnectionError("Hospital status provider is unreachable.")
         return {
             "provider_id": self.provider_id,
             "type": "HOSPITAL",
@@ -138,6 +150,10 @@ class MockTrafficProvider(TrafficSource):
         return events
 
     def health_check(self) -> Dict[str, Any]:
+        if self.simulate_timeout:
+            raise TimeoutError("Traffic provider connection timed out.")
+        if not self.is_healthy:
+            raise ConnectionError("Traffic provider is unreachable.")
         return {
             "provider_id": self.provider_id,
             "type": "TRAFFIC",

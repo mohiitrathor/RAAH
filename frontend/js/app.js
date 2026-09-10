@@ -23,6 +23,7 @@ import { ScenarioAnalysisController } from './components/scenario_analysis.js';
 import { PIRController } from './components/pir.js';
 import { RegressionController } from './components/regression.js';
 import { OptimizationController } from './components/optimization.js';
+import { IntegrationController } from './components/integrations.js';
 import { showToast } from './components/toasts.js';
 
 let pollCounter = 0;
@@ -61,6 +62,12 @@ async function bootstrap() {
   optCtrl.init();
   document.getElementById('nav-btn-optimization')?.addEventListener('click', () => {
     optCtrl.loadOptimizationData();
+  });
+
+  const intCtrl = new IntegrationController();
+  intCtrl.init();
+  document.getElementById('nav-btn-integrations')?.addEventListener('click', () => {
+    intCtrl.loadStatus();
   });
 
   // 3. Initial Lucide Icons Render

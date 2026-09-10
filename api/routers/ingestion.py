@@ -7,6 +7,7 @@ ambulance AVL/GPS telemetry, hospital status feeds, and traffic advisories.
 """
 
 from typing import Dict, Any, Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Header
 
 from api.dependencies import manager
@@ -201,6 +202,7 @@ def get_ingestion_status(
     user: AuthenticatedUser = Depends(require_permission(Permission.VIEW_LIVE)),
 ):
     return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "metrics": ingestion_service.get_metrics(),
         "adapters": adapter_registry.health_check_all(),
     }

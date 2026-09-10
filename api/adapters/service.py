@@ -43,6 +43,12 @@ class IngestionService:
         self.total_rejected = 0
         self.total_stale = 0
         self.total_latency_ms = 0.0
+        self.by_event_type: Dict[str, Dict[str, int]] = {
+            EventType.INCIDENT_CALL.value: {"ingested": 0, "accepted": 0, "duplicate": 0, "rejected": 0, "stale": 0},
+            EventType.AMBULANCE_GPS.value: {"ingested": 0, "accepted": 0, "duplicate": 0, "rejected": 0, "stale": 0},
+            EventType.HOSPITAL_STATUS.value: {"ingested": 0, "accepted": 0, "duplicate": 0, "rejected": 0, "stale": 0},
+            EventType.TRAFFIC_UPDATE.value: {"ingested": 0, "accepted": 0, "duplicate": 0, "rejected": 0, "stale": 0},
+        }
 
     # ==================================================================
     # PRIMARY INGESTION PIPELINE
@@ -434,6 +440,21 @@ class IngestionService:
         latency_ms = (time.perf_counter() - start_t) * 1000.0
         self.total_latency_ms += latency_ms
 
+        # Record into central Observability MetricsCollector (M13.5 Phase 1)
+        try:
+            from api.observability.metrics import metrics_collector
+            metrics_collector.record_ingestion(status=status.value, duration_ms=latency_ms)
+        except Exception:
+            pass
+
+        # Track per-event-type breakdown
+        etype = getattr(event.event_type, "value", str(event.event_type))
+        if etype in self.by_event_type:
+            self.by_event_type[etype]["ingested"] += 1
+            st_key = status.value.lower()
+            if st_key in self.by_event_type[etype]:
+                self.by_event_type[etype][st_key] += 1
+
         return IngestionResponse(
             status=status,
             event_id=event.event_id,
@@ -458,6 +479,7 @@ class IngestionService:
             "total_rejected": self.total_rejected,
             "total_stale": self.total_stale,
             "mean_latency_ms": round(mean_lat, 2),
+            "by_event_type": {k: dict(v) for k, v in self.by_event_type.items()},
         }
 
 

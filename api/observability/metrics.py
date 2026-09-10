@@ -57,6 +57,15 @@ class MetricsCollector:
         self._broadcast_count: int = 0
         self._heartbeats_total: int = 0
 
+        # External Telemetry Ingestion metrics (M13.5 Phase 1)
+        self._ingestion_events_total: int = 0
+        self._ingestion_accepted_total: int = 0
+        self._ingestion_duplicates_total: int = 0
+        self._ingestion_rejected_total: int = 0
+        self._ingestion_stale_total: int = 0
+        self._ingestion_latency_sum_ms: float = 0.0
+        self._ingestion_latency_count: int = 0
+
     def record_http_request(self, method: str, path: str, status_code: int, duration_ms: float):
         """Record an incoming HTTP request and response duration."""
         with self._lock:
@@ -149,6 +158,23 @@ class MetricsCollector:
         with self._lock:
             self._heartbeats_total += 1
 
+    def record_ingestion(self, status: str, duration_ms: float = 0.0):
+        """Record external telemetry ingestion outcome (M13.5 Phase 1)."""
+        with self._lock:
+            self._ingestion_events_total += 1
+            st = str(status).upper()
+            if st == "ACCEPTED":
+                self._ingestion_accepted_total += 1
+            elif st == "DUPLICATE":
+                self._ingestion_duplicates_total += 1
+            elif st == "REJECTED":
+                self._ingestion_rejected_total += 1
+            elif st == "STALE":
+                self._ingestion_stale_total += 1
+            if duration_ms > 0:
+                self._ingestion_latency_sum_ms += duration_ms
+                self._ingestion_latency_count += 1
+
     def get_snapshot(self) -> Dict[str, Any]:
         """Generate a complete operational metrics snapshot dictionary."""
         with self._lock:
@@ -170,6 +196,11 @@ class MetricsCollector:
             mean_bcast_lat = (
                 self._broadcast_latency_sum_ms / self._broadcast_count
                 if self._broadcast_count > 0
+                else 0.0
+            )
+            mean_ingest_lat = (
+                self._ingestion_latency_sum_ms / self._ingestion_latency_count
+                if self._ingestion_latency_count > 0
                 else 0.0
             )
 
@@ -214,6 +245,14 @@ class MetricsCollector:
                     "sequence_gaps_total": self._sequence_gaps_total,
                     "mean_broadcast_ms": round(mean_bcast_lat, 4),
                     "heartbeats_total": self._heartbeats_total,
+                },
+                "ingestion": {
+                    "events_total": self._ingestion_events_total,
+                    "accepted_total": self._ingestion_accepted_total,
+                    "duplicates_total": self._ingestion_duplicates_total,
+                    "rejected_total": self._ingestion_rejected_total,
+                    "stale_total": self._ingestion_stale_total,
+                    "mean_latency_ms": round(mean_ingest_lat, 2),
                 },
             }
 

@@ -33,6 +33,8 @@ export class ScenarioAnalysisController {
       workspaceReview: document.getElementById('review-workspace'),
       btnNavOpt: document.getElementById('nav-btn-optimization'),
       workspaceOpt: document.getElementById('optimization-workspace'),
+      btnNavIntegrations: document.getElementById('nav-btn-integrations'),
+      workspaceIntegrations: document.getElementById('integrations-workspace'),
       workspaceCommand: document.getElementById('command-workspace'),
       workspaceAnalytics: document.getElementById('analytics-workspace'),
       workspaceReplay: document.getElementById('replay-workspace'),
@@ -86,6 +88,7 @@ export class ScenarioAnalysisController {
       { btn: this.dom.btnNavReplay, ws: this.dom.workspaceReplay, drawer: false },
       { btn: this.dom.btnNavReview, ws: this.dom.workspaceReview, drawer: false },
       { btn: this.dom.btnNavOpt, ws: this.dom.workspaceOpt, drawer: false },
+      { btn: this.dom.btnNavIntegrations, ws: this.dom.workspaceIntegrations, drawer: false },
     ];
 
     const switchTab = (activeTab) => {
@@ -93,7 +96,7 @@ export class ScenarioAnalysisController {
         if (!btn || !ws) return;
         if (btn === activeTab.btn) {
           btn.classList.add('active');
-          ws.style.display = (ws === this.dom.workspaceReplay || ws === this.dom.workspaceReview || ws === this.dom.workspaceOpt) ? 'grid' : (ws === this.dom.workspaceAnalytics ? 'flex' : 'grid');
+          ws.style.display = (ws === this.dom.workspaceReplay || ws === this.dom.workspaceReview || ws === this.dom.workspaceOpt || ws === this.dom.workspaceIntegrations) ? 'grid' : (ws === this.dom.workspaceAnalytics ? 'flex' : 'grid');
         } else {
           btn.classList.remove('active');
           ws.style.display = 'none';

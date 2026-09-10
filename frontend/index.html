@@ -46,6 +46,9 @@
         <button id="nav-btn-optimization" class="nav-tab-btn">
           <i data-lucide="sparkles"></i> Optimization
         </button>
+        <button id="nav-btn-integrations" class="nav-tab-btn" title="External Telemetry & Provider Ingestion Health">
+          <i data-lucide="network"></i> Integrations
+        </button>
       </div>
 
       <!-- Telemetry Ticker -->
@@ -67,6 +70,13 @@
             <span class="pulse-dot"></span>
             <span id="stream-status-text">DISCONNECTED</span>
             <span id="stream-seq-badge" style="font-family: var(--font-mono); font-size: 9px; opacity: 0.8; margin-left: 2px;">#0</span>
+          </span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-label">Integrations</span>
+          <span id="integrations-status-pill" class="status-pill healthy" title="External Provider Integrations Health" style="cursor: pointer;">
+            <span class="pulse-dot"></span>
+            <span id="integrations-status-text">INTEGRATIONS: OK</span>
           </span>
         </div>
       </div>
@@ -906,6 +916,67 @@
             </div>
           </div>
         </div>
+      </div>
+    </main>
+
+    <!-- ==============================================================
+         INTEGRATION HEALTH & OBSERVABILITY WORKSPACE (M13.5 Phase 1)
+         ============================================================== -->
+    <main id="integrations-workspace" class="integrations-workspace" style="display: none; height: calc(100vh - 110px); grid-template-rows: auto auto 1fr; gap: 12px; padding: 16px; box-sizing: border-box; overflow-y: auto;">
+      <!-- Control Bar -->
+      <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+            <i data-lucide="network" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: #f1f5f9; font-size: 13px;">External Telemetry &amp; Provider Ingestion Health</div>
+            <div style="font-size: 11px; color: #94a3b8;">Observability cockpit for CAD 911 intake, AVL/GPS kinematics, hospital capacity, and traffic feeds</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="integrations-last-updated" style="font-size: 11px; color: #94a3b8; font-family: var(--font-mono, monospace);">Last Probed: -</span>
+          <button id="btn-refresh-integrations" class="btn-tactical btn-small" title="Probe All Provider Adapters">
+            <i data-lucide="rotate-cw"></i> Probe Feeds
+          </button>
+        </div>
+      </div>
+
+      <!-- Ingestion Telemetry KPI Scorecards -->
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+        <div class="panel" style="padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 2px;">Total Ingested</div>
+          <div id="int-kpi-total-ingested" style="font-size: 18px; font-weight: 800; color: #38bdf8; font-family: var(--font-mono, monospace);">0</div>
+          <div style="font-size: 9px; color: #64748b;">External events received</div>
+        </div>
+        <div class="panel" style="padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 2px;">Accepted</div>
+          <div id="int-kpi-total-accepted" style="font-size: 18px; font-weight: 800; color: #10b981; font-family: var(--font-mono, monospace);">0</div>
+          <div style="font-size: 9px; color: #64748b;">Dispatched &amp; executed</div>
+        </div>
+        <div class="panel" style="padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 2px;">Duplicates Deduplicated</div>
+          <div id="int-kpi-total-duplicates" style="font-size: 18px; font-weight: 800; color: #f59e0b; font-family: var(--font-mono, monospace);">0</div>
+          <div style="font-size: 9px; color: #64748b;">0 state mutation (idempotent)</div>
+        </div>
+        <div class="panel" style="padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 2px;">Rejected / Stale</div>
+          <div id="int-kpi-total-rejected" style="font-size: 18px; font-weight: 800; color: #ef4444; font-family: var(--font-mono, monospace);">0</div>
+          <div style="font-size: 9px; color: #64748b;">Schema / out-of-order errors</div>
+        </div>
+        <div class="panel" style="padding: 10px; text-align: center;">
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 2px;">Mean Ingestion Latency</div>
+          <div id="int-kpi-mean-latency" style="font-size: 18px; font-weight: 800; color: #c084fc; font-family: var(--font-mono, monospace);">0.00ms</div>
+          <div style="font-size: 9px; color: #64748b;">Validation &amp; lock processing</div>
+        </div>
+      </div>
+
+      <!-- 4 Provider Health Cards (2x2 Grid) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0;">
+        <div id="card-integration-cad"></div>
+        <div id="card-integration-gps"></div>
+        <div id="card-integration-hospital"></div>
+        <div id="card-integration-traffic"></div>
       </div>
     </main>
 
