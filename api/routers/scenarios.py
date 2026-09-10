@@ -31,9 +31,14 @@ from api.schemas.scenarios import (
     RunMetadataResponse,
     ReplayStateResponse,
 )
+from api.persistence.replay_compiler import (
+    resolve_replay_artifact,
+    list_operational_runs_metadata,
+)
 
 scenario_store = ScenarioStore()
 replay_store = ReplayStore()
+
 
 # In-memory cache of active ReplayEngine instances (replay_id -> ReplayEngine)
 _replay_engines: Dict[str, ReplayEngine] = {}
@@ -171,8 +176,10 @@ def run_scenario(
     summary="List all recorded replay runs",
 )
 def list_replays():
-    metas = replay_store.list_metadata()
-    return [RunMetadataResponse(**m.to_dict()) for m in metas]
+    scenario_metas = replay_store.list_metadata()
+    operational_metas = list_operational_runs_metadata()
+    all_metas = list(scenario_metas) + list(operational_metas)
+    return [RunMetadataResponse(**m.to_dict()) for m in all_metas]
 
 
 @router.get(
@@ -180,9 +187,7 @@ def list_replays():
     summary="Get metadata and final summary for a replay archive",
 )
 def get_replay_summary(replay_id: str):
-    rep = replay_store.get(replay_id)
-    if not rep:
-        raise HTTPException(status_code=404, detail=f"Replay '{replay_id}' not found.")
+    rep = resolve_replay_artifact(replay_id, not_found_msg=f"Replay '{replay_id}' not found.")
     return {
         "replay_format_version": rep.replay_format_version,
         "run_metadata": rep.run_metadata.to_dict(),
@@ -195,12 +200,11 @@ def get_replay_summary(replay_id: str):
 def _get_or_load_replay_engine(replay_id: str) -> ReplayEngine:
     if replay_id in _replay_engines:
         return _replay_engines[replay_id]
-    rep = replay_store.get(replay_id)
-    if not rep:
-        raise HTTPException(status_code=404, detail=f"Replay '{replay_id}' not found.")
+    rep = resolve_replay_artifact(replay_id, not_found_msg=f"Replay '{replay_id}' not found.")
     engine = ReplayEngine(rep)
     _replay_engines[replay_id] = engine
     return engine
+
 
 
 @router.get(

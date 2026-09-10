@@ -17,6 +17,7 @@ from Dispatch.scenarios.analysis import (
     ReplaySessionManager,
 )
 from Dispatch.scenarios.models import ReplayArtifact
+from api.persistence.replay_compiler import resolve_replay_artifact
 from api.schemas.replay_analysis import (
     ReplayTimelineResponse,
     ReplayEventSummaryResponse,
@@ -41,10 +42,8 @@ _session_modes: Dict[str, str] = {}
 
 
 def _get_artifact(run_id: str) -> ReplayArtifact:
-    artifact = replay_store.get(run_id)
-    if not artifact:
-        raise HTTPException(status_code=404, detail=f"Replay archive '{run_id}' not found.")
-    return artifact
+    return resolve_replay_artifact(run_id, not_found_msg=f"Replay archive '{run_id}' not found.")
+
 
 
 @router.get(

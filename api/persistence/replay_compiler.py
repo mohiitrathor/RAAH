@@ -25,6 +25,9 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Tuple, Union
 
+from fastapi import HTTPException
+
+from api.settings import settings
 from api.persistence.db import get_connection, DEFAULT_DB_PATH
 from api.persistence.serializer import compute_state_checksum
 from Dispatch.scenarios.models import (
@@ -810,3 +813,188 @@ def compile_operational_run_to_artifact(
         require_checkpoints=require_checkpoints,
         allow_empty=allow_empty,
     )
+
+
+# ======================================================================
+# OPERATIONAL REPLAY RESOLUTION & LISTING (M13.4 Phase 2)
+# ======================================================================
+
+_compiled_artifacts_cache: Dict[str, ReplayArtifact] = {}
+
+
+def clear_compiled_artifacts_cache():
+    """Clear in-memory cache of compiled operational artifacts."""
+    _compiled_artifacts_cache.clear()
+
+
+def is_operational_replay_id(replay_id: str) -> bool:
+    """
+    Check whether a replay_id follows operational run conventions.
+    Operational runs are identified by `run_<digits>` format.
+    """
+    if not isinstance(replay_id, str):
+        return False
+    if replay_id.startswith("run_") and replay_id[4:].isdigit():
+        return True
+    return False
+
+
+def parse_operational_run_id(replay_id: str) -> Optional[int]:
+    """Parse numeric run_id from operational replay identifier."""
+    if not isinstance(replay_id, str):
+        return None
+    if replay_id.startswith("run_") and replay_id[4:].isdigit():
+        return int(replay_id[4:])
+    if replay_id.isdigit():
+        return int(replay_id)
+    return None
+
+
+def list_operational_runs_metadata(
+    db_path: Optional[Path] = None,
+    limit: Optional[int] = None,
+) -> List[RunMetadata]:
+    """
+    Query SQLite persistence layer for operational simulation runs
+    and return them as standard RunMetadata containers.
+    Optimized for high concurrency and sub-10ms response times.
+    """
+    resolved_db = Path(db_path or getattr(settings, "database_path", DEFAULT_DB_PATH)).resolve()
+    if not resolved_db.exists():
+        return []
+
+    try:
+        conn = get_connection(resolved_db)
+        conn.execute("PRAGMA query_only = ON;")
+        cursor = conn.cursor()
+
+        # 1. Fetch simulation runs
+        run_query = """
+            SELECT run_id, started_at, ended_at, status, total_ticks, final_sim_time, notes
+            FROM simulation_runs
+            ORDER BY run_id DESC
+        """
+        if limit is not None and limit > 0:
+            run_query += f" LIMIT {int(limit)}"
+
+        cursor.execute(run_query)
+        rows = [dict(r) for r in cursor.fetchall()]
+
+        if not rows:
+            conn.close()
+            return []
+
+        # 2. Fast single-pass group queries for event counts
+        cursor.execute("SELECT run_id, count(*) FROM historical_dispatches GROUP BY run_id;")
+        dispatch_counts = dict(cursor.fetchall())
+
+        cursor.execute("SELECT run_id, count(*) FROM historical_events GROUP BY run_id;")
+        event_counts = dict(cursor.fetchall())
+
+        cursor.execute("SELECT run_id, count(*) FROM historical_redirections GROUP BY run_id;")
+        redir_counts = dict(cursor.fetchall())
+
+        conn.close()
+    except Exception as ex:
+        logger.warning("Failed to list operational runs from SQLite: %s", ex)
+        return []
+
+    metas: List[RunMetadata] = []
+    for r in rows:
+        rid = r["run_id"]
+        wall_clock_duration = 0.0
+        if r.get("started_at") and r.get("ended_at"):
+            try:
+                t0 = datetime.fromisoformat(r["started_at"])
+                t1 = datetime.fromisoformat(r["ended_at"])
+                wall_clock_duration = max(0.0, (t1 - t0).total_seconds())
+            except Exception:
+                wall_clock_duration = 0.0
+
+        end_sim = int(r.get("final_sim_time") or r.get("total_ticks") or 0)
+        tot_evs = (
+            dispatch_counts.get(rid, 0)
+            + event_counts.get(rid, 0)
+            + redir_counts.get(rid, 0)
+        )
+
+        metas.append(
+            RunMetadata(
+                scenario_id=f"OPERATIONAL_RUN_{rid}",
+                run_id=f"run_{rid}",
+                start_sim_time=0,
+                end_sim_time=end_sim,
+                wall_clock_duration_seconds=round(wall_clock_duration, 4),
+                event_count=tot_evs,
+                snapshot_count=0,
+                completion_status=str(r.get("status") or "COMPLETED"),
+                deterministic_seed=0,
+                replay_format_version="1.0.0",
+                created_at=str(r.get("ended_at") or r.get("started_at") or datetime.now(timezone.utc).isoformat()),
+            )
+        )
+    return metas
+
+
+
+def resolve_replay_artifact(
+    replay_id: str,
+    db_path: Optional[Path] = None,
+    not_found_msg: Optional[str] = None,
+) -> ReplayArtifact:
+    """
+    Unified resolver: retrieves scenario replays from disk ReplayStore,
+    or compiles persisted operational runs from SQLite on demand.
+    """
+    # 1. Check in-memory compiled cache
+    if replay_id in _compiled_artifacts_cache:
+        return _compiled_artifacts_cache[replay_id]
+
+    resolved_db = Path(db_path or getattr(settings, "database_path", DEFAULT_DB_PATH)).resolve()
+
+    # 2. Check if operational run identifier (e.g. run_1, run_42)
+    if is_operational_replay_id(replay_id):
+        numeric_run_id = parse_operational_run_id(replay_id)
+        if numeric_run_id is None:
+            raise HTTPException(status_code=404, detail=not_found_msg or f"Operational replay run '{replay_id}' not found.")
+
+        compiler = OperationalReplayCompiler(db_path=resolved_db)
+        try:
+            artifact = compiler.compile(numeric_run_id, allow_empty=True)
+            _compiled_artifacts_cache[replay_id] = artifact
+            return artifact
+        except RunNotFoundError:
+            raise HTTPException(status_code=404, detail=not_found_msg or f"Operational replay run '{replay_id}' not found.")
+        except CorruptCheckpointError as ex:
+            logger.warning("Corrupt checkpoint in operational run %s: %s", replay_id, ex)
+            raise HTTPException(status_code=422, detail=f"Operational replay run '{replay_id}' has corrupt checkpoint data.")
+        except MalformedPersistenceError as ex:
+            logger.warning("Malformed persistence data in operational run %s: %s", replay_id, ex)
+            raise HTTPException(status_code=422, detail=f"Operational replay run '{replay_id}' has malformed persistence data.")
+        except ReplayCompilationError as ex:
+            logger.error("Failed to compile operational run %s: %s", replay_id, ex)
+            raise HTTPException(status_code=400, detail=f"Failed to compile operational replay run '{replay_id}'.")
+
+    # 3. Otherwise, check file-based scenario replay store
+    from Dispatch.scenarios.store import ReplayStore
+    scenario_store = ReplayStore()
+    rep = scenario_store.get(replay_id)
+    if rep:
+        return rep
+
+    # 4. Fallback check: could replay_id be a bare integer referring to an operational run?
+    numeric_id = parse_operational_run_id(replay_id)
+    if numeric_id is not None and resolved_db.exists():
+        compiler = OperationalReplayCompiler(db_path=resolved_db)
+        try:
+            artifact = compiler.compile(numeric_id, allow_empty=True)
+            _compiled_artifacts_cache[replay_id] = artifact
+            return artifact
+        except RunNotFoundError:
+            pass
+        except CorruptCheckpointError:
+            raise HTTPException(status_code=422, detail=f"Operational replay run '{replay_id}' has corrupt checkpoint data.")
+        except MalformedPersistenceError:
+            raise HTTPException(status_code=422, detail=f"Operational replay run '{replay_id}' has malformed persistence data.")
+
+    raise HTTPException(status_code=404, detail=not_found_msg or f"Replay archive '{replay_id}' not found.")

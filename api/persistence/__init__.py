@@ -27,6 +27,10 @@ from api.persistence.bridge import persistence_bridge
 from api.persistence.replay_compiler import (
     OperationalReplayCompiler,
     compile_operational_run_to_artifact,
+    resolve_replay_artifact,
+    list_operational_runs_metadata,
+    is_operational_replay_id,
+    clear_compiled_artifacts_cache,
     ReplayCompilationError,
     RunNotFoundError,
     NoCheckpointsError,
@@ -56,6 +60,10 @@ __all__ = [
     "DatabaseLockedError",
     "OperationalReplayCompiler",
     "compile_operational_run_to_artifact",
+    "resolve_replay_artifact",
+    "list_operational_runs_metadata",
+    "is_operational_replay_id",
+    "clear_compiled_artifacts_cache",
     "ReplayCompilationError",
     "RunNotFoundError",
     "NoCheckpointsError",
@@ -63,4 +71,3 @@ __all__ = [
     "MalformedPersistenceError",
     "EmptyRunError",
 ]
-
