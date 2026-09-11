@@ -78,13 +78,14 @@ export class ReplayController {
     this.replayMap = window.L.map('replay-leaflet-map', {
       center: [26.9124, 75.7873],
       zoom: 12,
-      attributionControl: false,
+      attributionControl: true,
     });
 
-    // Dark tactical tile layer
-    window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // High-readability tactical base tiles (public raster service with attribution, no credentials required)
+    window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18,
-      subdomains: 'abcd',
+      maxNativeZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
     }).addTo(this.replayMap);
   }
 

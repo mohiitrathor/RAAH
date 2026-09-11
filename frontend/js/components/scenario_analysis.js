@@ -9,6 +9,7 @@
 
 import * as api from '../api.js';
 import { showToast } from './toasts.js';
+import { navigation } from '../navigation.js';
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -82,43 +83,13 @@ export class ScenarioAnalysisController {
   }
 
   setupWorkspaceNavigation() {
-    const tabs = [
-      { btn: this.dom.btnNavTactical, ws: this.dom.workspaceCommand, drawer: true },
-      { btn: this.dom.btnNavAnalytics, ws: this.dom.workspaceAnalytics, drawer: false },
-      { btn: this.dom.btnNavReplay, ws: this.dom.workspaceReplay, drawer: false },
-      { btn: this.dom.btnNavReview, ws: this.dom.workspaceReview, drawer: false },
-      { btn: this.dom.btnNavOpt, ws: this.dom.workspaceOpt, drawer: false },
-      { btn: this.dom.btnNavIntegrations, ws: this.dom.workspaceIntegrations, drawer: false },
-    ];
-
-    const switchTab = (activeTab) => {
-      tabs.forEach(({ btn, ws }) => {
-        if (!btn || !ws) return;
-        if (btn === activeTab.btn) {
-          btn.classList.add('active');
-          ws.style.display = (ws === this.dom.workspaceReplay || ws === this.dom.workspaceReview || ws === this.dom.workspaceOpt || ws === this.dom.workspaceIntegrations) ? 'grid' : (ws === this.dom.workspaceAnalytics ? 'flex' : 'grid');
-        } else {
-          btn.classList.remove('active');
-          ws.style.display = 'none';
+    navigation.on('replay', 'activate', () => {
+      setTimeout(() => {
+        if (this.replayCtrl?.replayMap) {
+          this.replayCtrl.replayMap.invalidateSize();
         }
-      });
-
-      if (this.dom.intelDrawer) {
-        this.dom.intelDrawer.style.display = activeTab.drawer ? 'flex' : 'none';
-      }
-
-      if (activeTab.btn === this.dom.btnNavReplay) {
-        setTimeout(() => {
-          if (this.replayCtrl?.replayMap) {
-            this.replayCtrl.replayMap.invalidateSize();
-          }
-        }, 150);
-        this.loadBrowserList();
-      }
-    };
-
-    tabs.forEach((tab) => {
-      tab.btn?.addEventListener('click', () => switchTab(tab));
+      }, 150);
+      this.loadBrowserList();
     });
   }
 

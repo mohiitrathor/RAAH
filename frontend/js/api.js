@@ -264,6 +264,7 @@ export const getOptimizationHealth = () => request('/optimization/health');
 // M11 Phase 3: Adaptive Policy & Bounded Autonomy APIs
 export const getPolicyOverview = () => request('/optimization/policy');
 export const getPolicyConfig = () => request('/optimization/policy/config');
+export const getPolicyHistory = () => request('/optimization/policy/history');
 export const setPolicyMode = (mode, operatorId = 'OPERATOR_COMMANDER', reason = '') =>
   request('/optimization/policy/mode', {
     method: 'POST',

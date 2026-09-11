@@ -212,19 +212,21 @@ export class PIRController {
     }
 
     this.dom.containerFindingsList.innerHTML = list.map(f => {
-      const badgeColor = f.severity === 'CRITICAL' ? '#ef4444' : f.severity === 'WARNING' ? '#f59e0b' : '#38bdf8';
+      const badgeColor = f.severity === 'CRITICAL' ? 'var(--status-danger)' : f.severity === 'WARNING' ? 'var(--status-warning)' : 'var(--accent-cyan)';
       const causes = Array.isArray(f.potential_causes) ? f.potential_causes.map(escapeHtml).join(', ') : escapeHtml(f.potential_causes);
       return `
-        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 11px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <span style="font-weight: 700; color: #f1f5f9;">${escapeHtml(f.title)}</span>
-            <span style="background: ${badgeColor}; color: #000; font-weight: 800; font-size: 9px; padding: 2px 6px; border-radius: 3px;">
+        <div style="background: var(--surface-panel); border: 1px solid var(--border-subtle); border-left: 3px solid ${badgeColor}; border-radius: var(--radius-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 12px;">${escapeHtml(f.title)}</span>
+            <span style="background: ${badgeColor}; color: #000; font-weight: 800; font-size: 9px; padding: 2px 6px; border-radius: 2px; font-family: var(--font-mono); letter-spacing: 0.05em;">
               ${escapeHtml(f.severity)}
             </span>
           </div>
-          <div style="color: #94a3b8; margin-bottom: 6px;">${escapeHtml(f.description)}</div>
-          <div style="color: #cbd5e1; font-size: 10px; margin-bottom: 4px;"><b>Impact:</b> ${escapeHtml(f.measurable_impact)}</div>
-          <div style="color: #64748b; font-size: 10px;"><b>Potential Causes:</b> ${causes}</div>
+          <div style="color: var(--text-secondary); font-size: 11px; line-height: 1.45;">${escapeHtml(f.description)}</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 10px;">
+            <div><span style="color: #64748b; font-weight: 700;">IMPACT:</span> <span style="color: #cbd5e1;">${escapeHtml(f.measurable_impact)}</span></div>
+            <div><span style="color: #64748b; font-weight: 700;">CAUSAL VECTORS:</span> <span style="color: #cbd5e1;">${causes}</span></div>
+          </div>
         </div>
       `;
     }).join('');
@@ -244,15 +246,15 @@ export class PIRController {
     }
 
     this.dom.containerRecommendations.innerHTML = recs.map(r => {
-      const pColor = r.priority === 'URGENT' ? '#ef4444' : r.priority === 'HIGH' ? '#f97316' : '#38bdf8';
+      const pColor = r.priority === 'URGENT' ? 'var(--status-danger)' : r.priority === 'HIGH' ? 'var(--status-warning)' : 'var(--accent-cyan)';
       return `
-        <div style="background: rgba(15, 23, 42, 0.9); border-left: 3px solid ${pColor}; border-top: 1px solid #334155; border-right: 1px solid #334155; border-bottom: 1px solid #334155; border-radius: 4px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-            <span style="font-weight: 700; color: #f1f5f9;">${escapeHtml(r.issue)}</span>
-            <span style="color: ${pColor}; font-weight: 800; font-size: 9px;">[${escapeHtml(r.priority)}]</span>
+        <div style="background: var(--surface-panel); border: 1px solid var(--border-subtle); border-left: 3px solid ${pColor}; border-radius: var(--radius-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 12px;">${escapeHtml(r.issue)}</span>
+            <span style="color: ${pColor}; font-weight: 800; font-size: 9px; font-family: var(--font-mono); letter-spacing: 0.05em;">[${escapeHtml(r.priority)}]</span>
           </div>
-          <div style="color: #7dd3fc; margin-bottom: 2px;"><b>Action:</b> ${escapeHtml(r.action)}</div>
-          <div style="color: #94a3b8; font-size: 10px;"><b>Expected Benefit:</b> ${escapeHtml(r.expected_benefit)}</div>
+          <div style="color: var(--accent-cyan); font-size: 11px;"><strong style="color: #64748b; text-transform: uppercase; font-size: 9px;">Action:</strong> ${escapeHtml(r.action)}</div>
+          <div style="color: var(--text-secondary); font-size: 10px;"><strong style="color: #64748b; text-transform: uppercase; font-size: 9px;">Expected Benefit:</strong> ${escapeHtml(r.expected_benefit)}</div>
         </div>
       `;
     }).join('');

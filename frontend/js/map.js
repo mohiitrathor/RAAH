@@ -33,13 +33,14 @@ class TacticalMap {
       center: JAIPUR_CENTER,
       zoom: 12,
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
     });
 
-    // Dark Matter Tactical Base Tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // High-readability tactical base tiles (public raster service with attribution, no credentials required)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18,
-      subdomains: 'abcd',
+      maxNativeZoom: 16,
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
     }).addTo(this.map);
 
     // Layer groups for clean management
@@ -48,6 +49,16 @@ class TacticalMap {
     this.incidentsLayer = L.layerGroup().addTo(this.map);
     this.enRouteAmbulancesLayer = L.layerGroup().addTo(this.map);
     this.mciLayer = L.layerGroup().addTo(this.map);
+
+    this.clusterMarkers = new Map();
+    this.latestHospitalsMap = null;
+
+    // Re-render hospitals on zoom changes for smooth level-of-detail transition
+    this.map.on('zoomend', () => {
+      if (this.latestHospitalsMap) {
+        this.renderHospitals(this.latestHospitalsMap);
+      }
+    });
 
     // Subscribe to state changes
     store.subscribe((state, changedKeys) => {
@@ -60,105 +71,219 @@ class TacticalMap {
     });
   }
 
-  // --- TIER 1: HOSPITALS (Always Visible) ---
+  // --- TIER 1: HOSPITALS (Level-of-Detail Presentation) ---
   renderHospitals(hospitalsMap) {
     if (!hospitalsMap) return;
+    this.latestHospitalsMap = hospitalsMap;
+
     const currentHospIds = new Set();
+    const currentClusterKeys = new Set();
+    const zoom = this.map.getZoom();
 
-    for (const [id, hosp] of hospitalsMap.entries()) {
-      currentHospIds.add(String(id));
-      const isSaturated = hosp.available_beds <= 0 || hosp.is_full;
-      const isCriticalIcuFull = hosp.available_icu <= 0;
+    if (zoom >= 13) {
+      // Zoomed in: clear clusters, render all individual hospitals
+      for (const [key, marker] of this.clusterMarkers.entries()) {
+        this.hospitalsLayer.removeLayer(marker);
+        this.clusterMarkers.delete(key);
+      }
 
-      const markerClass = `hospital-marker-pin ${isSaturated ? 'saturated' : ''}`;
-      const color = isSaturated ? '#ef4444' : '#0ea5e9';
-
-      const popupHtml = `
-        <div style="font-family: var(--font-sans); min-width: 185px;">
-          <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px; color: ${color};">
-            ${hosp.hospital_id} (${hosp.hospital_type})
-          </div>
-          <div style="font-size: 11px; color: #94a3b8; font-family: var(--font-mono);">
-            <div>Available Beds: <strong>${hosp.available_beds}</strong> / ${hosp.capacity}</div>
-            <div>Available ICU: <strong>${hosp.available_icu}</strong> / ${hosp.icu_capacity}</div>
-            <div style="margin-top: 4px; font-weight: 700; color: ${isSaturated ? '#ef4444' : '#10b981'};">
-              ${isSaturated ? '⚠️ SATURATED (NO BEDS)' : '✓ CAPACITY AVAILABLE'}
-            </div>
-            <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #334155;">
-              <button class="btn-saturate-hosp" data-hosp="${hosp.hospital_id}" style="background:#ef4444; color:#fff; border:none; border-radius:3px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer; width:100%; font-family:var(--font-sans);">
-                ⚡ Simulate Saturation (Mark Full)
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      const existing = this.hospitalMarkers.get(String(id));
-      if (existing) {
-        existing.marker.setLatLng([hosp.latitude, hosp.longitude]);
-        if (existing.marker.getPopup()) {
-          existing.marker.setPopupContent(popupHtml);
+      for (const [id, hosp] of hospitalsMap.entries()) {
+        currentHospIds.add(String(id));
+        this._renderIndividualHospital(id, hosp);
+      }
+    } else {
+      // Broad view (zoom < 13):
+      // Always render saturated hospitals individually as critical alerts
+      const availableList = [];
+      for (const [id, hosp] of hospitalsMap.entries()) {
+        const isSaturated = hosp.available_beds <= 0 || hosp.is_full;
+        if (isSaturated) {
+          currentHospIds.add(String(id));
+          this._renderIndividualHospital(id, hosp);
+        } else {
+          availableList.push(hosp);
         }
-        if (existing.isSaturated !== isSaturated) {
-          existing.isSaturated = isSaturated;
-          const icon = L.divIcon({
-            className: 'custom-hosp-icon',
+      }
+
+      // Group nearby available hospitals by screen distance (~45px)
+      const clusters = [];
+      const assigned = new Set();
+
+      for (let i = 0; i < availableList.length; i++) {
+        if (assigned.has(i)) continue;
+        const h1 = availableList[i];
+        const p1 = this.map.latLngToLayerPoint([h1.latitude, h1.longitude]);
+        const group = [h1];
+        assigned.add(i);
+
+        for (let j = i + 1; j < availableList.length; j++) {
+          if (assigned.has(j)) continue;
+          const h2 = availableList[j];
+          const p2 = this.map.latLngToLayerPoint([h2.latitude, h2.longitude]);
+          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          if (dist < 42) {
+            group.push(h2);
+            assigned.add(j);
+          }
+        }
+        clusters.push(group);
+      }
+
+      // Render clusters or singletons
+      for (const group of clusters) {
+        if (group.length === 1) {
+          const hosp = group[0];
+          currentHospIds.add(String(hosp.hospital_id));
+          this._renderIndividualHospital(hosp.hospital_id, hosp);
+        } else {
+          const totalLat = group.reduce((sum, h) => sum + h.latitude, 0);
+          const totalLon = group.reduce((sum, h) => sum + h.longitude, 0);
+          const cLat = totalLat / group.length;
+          const cLon = totalLon / group.length;
+          const clusterKey = `cluster_${cLat.toFixed(3)}_${cLon.toFixed(3)}`;
+          currentClusterKeys.add(clusterKey);
+
+          const totalBeds = group.reduce((sum, h) => sum + (h.available_beds || 0), 0);
+
+          const clusterIcon = L.divIcon({
+            className: 'custom-hosp-cluster-icon',
             html: `
-              <div class="${markerClass}" style="background: ${color}; width: 22px; height: 22px; border-radius: 4px; display:flex; align-items:center; justify-content:center; border: 1px solid #fff;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
+              <div class="hospital-cluster-pin" style="background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 12px; padding: 2px 7px; font-size: 11px; font-weight: 700; color: #38bdf8; font-family: var(--font-mono); display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.6); cursor: pointer;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+                <span>${group.length}</span>
               </div>
             `,
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
+            iconSize: [44, 22],
+            iconAnchor: [22, 11],
           });
-          existing.marker.setIcon(icon);
-        }
-      } else {
-        const icon = L.divIcon({
-          className: 'custom-hosp-icon',
-          html: `
-            <div class="${markerClass}" style="background: ${color}; width: 22px; height: 22px; border-radius: 4px; display:flex; align-items:center; justify-content:center; border: 1px solid #fff;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-            </div>
-          `,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        });
 
-        const marker = L.marker([hosp.latitude, hosp.longitude], { icon });
-        marker.bindPopup(popupHtml);
-
-        marker.on('popupopen', (e) => {
-          const popupNode = e.popup.getElement();
-          if (!popupNode) return;
-          const btn = popupNode.querySelector('.btn-saturate-hosp');
-          if (btn) {
-            btn.onclick = async () => {
-              try {
-                await api.scheduleEvent(store.state.simTime, 'HOSPITAL_FULL', { hospital_id: hosp.hospital_id });
-                showToast('Hospital Saturated', `Simulated 100% capacity for ${hosp.hospital_id}`, 'warning');
-                marker.closePopup();
-              } catch (err) {
-                showToast('Event Error', err.message, 'danger');
-              }
-            };
+          let cMarker = this.clusterMarkers.get(clusterKey);
+          if (cMarker) {
+            cMarker.setLatLng([cLat, cLon]);
+            cMarker.setIcon(clusterIcon);
+          } else {
+            cMarker = L.marker([cLat, cLon], { icon: clusterIcon });
+            cMarker.bindPopup(`
+              <div style="font-family: var(--font-sans); min-width: 170px;">
+                <div style="font-weight: 700; font-size: 12px; color: #38bdf8; margin-bottom: 4px;">
+                  ${group.length} Facilities in Sector
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; font-family: var(--font-mono);">
+                  <div>Total Available Beds: <strong>${totalBeds}</strong></div>
+                  <div style="margin-top: 6px; color: #e2e8f0; font-size: 10px;">Click to zoom into sector</div>
+                </div>
+              </div>
+            `);
+            cMarker.on('click', () => {
+              this.map.setView([cLat, cLon], 14);
+            });
+            this.clusterMarkers.set(clusterKey, cMarker);
+            this.hospitalsLayer.addLayer(cMarker);
           }
-        });
+        }
+      }
 
-        this.hospitalMarkers.set(String(id), { marker, isSaturated });
-        this.hospitalsLayer.addLayer(marker);
+      // Remove obsolete clusters
+      for (const [key, marker] of this.clusterMarkers.entries()) {
+        if (!currentClusterKeys.has(key)) {
+          this.hospitalsLayer.removeLayer(marker);
+          this.clusterMarkers.delete(key);
+        }
       }
     }
 
+    // Remove obsolete individual hospital markers
     for (const [id, entry] of this.hospitalMarkers.entries()) {
       if (!currentHospIds.has(String(id))) {
         this.hospitalsLayer.removeLayer(entry.marker);
         this.hospitalMarkers.delete(id);
       }
+    }
+  }
+
+  _renderIndividualHospital(id, hosp) {
+    const isSaturated = hosp.available_beds <= 0 || hosp.is_full;
+    const markerClass = `hospital-marker-pin ${isSaturated ? 'saturated' : ''}`;
+    const color = isSaturated ? '#ef4444' : '#0ea5e9';
+
+    const popupHtml = `
+      <div style="font-family: var(--font-sans); min-width: 185px;">
+        <div style="font-weight: 700; font-size: 13px; margin-bottom: 4px; color: ${color};">
+          ${hosp.hospital_id} (${hosp.hospital_type})
+        </div>
+        <div style="font-size: 11px; color: #94a3b8; font-family: var(--font-mono);">
+          <div>Available Beds: <strong>${hosp.available_beds}</strong> / ${hosp.capacity}</div>
+          <div>Available ICU: <strong>${hosp.available_icu}</strong> / ${hosp.icu_capacity}</div>
+          <div style="margin-top: 4px; font-weight: 700; color: ${isSaturated ? '#ef4444' : '#10b981'};">
+            ${isSaturated ? '⚠️ SATURATED (NO BEDS)' : '✓ CAPACITY AVAILABLE'}
+          </div>
+          <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #334155;">
+            <button class="btn-saturate-hosp" data-hosp="${hosp.hospital_id}" style="background:#ef4444; color:#fff; border:none; border-radius:3px; padding:4px 8px; font-size:10px; font-weight:700; cursor:pointer; width:100%; font-family:var(--font-sans);">
+              ⚡ Simulate Saturation (Mark Full)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const existing = this.hospitalMarkers.get(String(id));
+    if (existing) {
+      existing.marker.setLatLng([hosp.latitude, hosp.longitude]);
+      if (existing.marker.getPopup()) {
+        existing.marker.setPopupContent(popupHtml);
+      }
+      if (existing.isSaturated !== isSaturated) {
+        existing.isSaturated = isSaturated;
+        const icon = L.divIcon({
+          className: 'custom-hosp-icon',
+          html: `
+            <div class="${markerClass}" style="background: ${color}; width: 20px; height: 20px; border-radius: 4px; display:flex; align-items:center; justify-content:center; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </div>
+          `,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+        });
+        existing.marker.setIcon(icon);
+      }
+    } else {
+      const icon = L.divIcon({
+        className: 'custom-hosp-icon',
+        html: `
+          <div class="${markerClass}" style="background: ${color}; width: 20px; height: 20px; border-radius: 4px; display:flex; align-items:center; justify-content:center; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      const marker = L.marker([hosp.latitude, hosp.longitude], { icon });
+      marker.bindPopup(popupHtml);
+
+      marker.on('popupopen', (e) => {
+        const popupNode = e.popup.getElement();
+        if (!popupNode) return;
+        const btn = popupNode.querySelector('.btn-saturate-hosp');
+        if (btn) {
+          btn.onclick = async () => {
+            try {
+              await api.scheduleEvent(store.state.simTime, 'HOSPITAL_FULL', { hospital_id: hosp.hospital_id });
+              showToast('Hospital Saturated', `Simulated 100% capacity for ${hosp.hospital_id}`, 'warning');
+              marker.closePopup();
+            } catch (err) {
+              showToast('Event Error', err.message, 'danger');
+            }
+          };
+        }
+      });
+
+      this.hospitalMarkers.set(String(id), { marker, isSaturated });
+      this.hospitalsLayer.addLayer(marker);
     }
   }
 

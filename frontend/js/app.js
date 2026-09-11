@@ -25,6 +25,7 @@ import { RegressionController } from './components/regression.js';
 import { OptimizationController } from './components/optimization.js';
 import { IntegrationController } from './components/integrations.js';
 import { showToast } from './components/toasts.js';
+import { navigation } from './navigation.js';
 
 let pollCounter = 0;
 let isPolling = false;
@@ -60,15 +61,64 @@ async function bootstrap() {
 
   const optCtrl = new OptimizationController();
   optCtrl.init();
-  document.getElementById('nav-btn-optimization')?.addEventListener('click', () => {
-    optCtrl.loadOptimizationData();
-  });
 
   const intCtrl = new IntegrationController();
   intCtrl.init();
-  document.getElementById('nav-btn-integrations')?.addEventListener('click', () => {
-    intCtrl.loadStatus();
+
+  // Authoritative workspace navigation registration
+  navigation.register('tactical', {
+    buttonId: 'nav-btn-tactical',
+    containerId: 'command-workspace',
+    onActivate: () => {
+      setTimeout(() => {
+        tacticalMap.map?.invalidateSize();
+      }, 80);
+    },
   });
+
+  navigation.register('analytics', {
+    buttonId: 'nav-btn-analytics',
+    containerId: 'analytics-workspace',
+  });
+
+  navigation.register('replay', {
+    buttonId: 'nav-btn-replay',
+    containerId: 'replay-workspace',
+    onActivate: () => {
+      setTimeout(() => {
+        replayCtrl.replayMap?.invalidateSize();
+      }, 80);
+    },
+  });
+
+  navigation.register('review', {
+    buttonId: 'nav-btn-review',
+    containerId: 'review-workspace',
+    onActivate: () => {
+      document.getElementById('btn-refresh-pir')?.click();
+    },
+  });
+
+  navigation.register('optimization', {
+    buttonId: 'nav-btn-optimization',
+    containerId: 'optimization-workspace',
+    onActivate: () => {
+      optCtrl.loadOptimizationData();
+    },
+  });
+
+  navigation.register('integrations', {
+    buttonId: 'nav-btn-integrations',
+    containerId: 'integrations-workspace',
+    onActivate: () => {
+      intCtrl.loadStatus();
+    },
+  });
+
+  navigation.init('tactical');
+
+  // Setup tactical right-rail subtabs and bottom drawer collapsible tray
+  setupTacticalSubtabsAndDrawer();
 
   // 3. Initial Lucide Icons Render
   if (window.lucide) {
@@ -294,9 +344,51 @@ function initRealtimeStream() {
   });
 }
 
+function setupTacticalSubtabsAndDrawer() {
+  const btnReadiness = document.getElementById('tab-btn-readiness');
+  const btnCoordination = document.getElementById('tab-btn-coordination');
+  const paneReadiness = document.getElementById('tab-pane-readiness');
+  const paneCoordination = document.getElementById('tab-pane-coordination');
+
+  if (btnReadiness && btnCoordination && paneReadiness && paneCoordination) {
+    btnReadiness.addEventListener('click', () => {
+      btnReadiness.classList.add('active');
+      btnCoordination.classList.remove('active');
+      paneReadiness.style.display = 'flex';
+      paneCoordination.style.display = 'none';
+      if (window.lucide) window.lucide.createIcons();
+    });
+
+    btnCoordination.addEventListener('click', () => {
+      btnCoordination.classList.add('active');
+      btnReadiness.classList.remove('active');
+      paneCoordination.style.display = 'flex';
+      paneReadiness.style.display = 'none';
+      if (window.lucide) window.lucide.createIcons();
+    });
+  }
+
+  const btnToggleDrawer = document.getElementById('btn-toggle-bottom-drawer');
+  const bottomDrawer = document.getElementById('bottom-drawer');
+  const commandWorkspace = document.getElementById('command-workspace');
+
+  if (btnToggleDrawer && bottomDrawer) {
+    btnToggleDrawer.addEventListener('click', () => {
+      const isCollapsed = bottomDrawer.classList.toggle('collapsed');
+      if (commandWorkspace) {
+        commandWorkspace.classList.toggle('drawer-collapsed', isCollapsed);
+      }
+      setTimeout(() => {
+        tacticalMap.map?.invalidateSize();
+      }, 210);
+    });
+  }
+}
+
 // Start on DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootstrap);
 } else {
   bootstrap();
 }
+

@@ -78,27 +78,44 @@ export function setupIncidents() {
       return;
     }
 
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
     container.innerHTML = incidents.map(inc => {
       const pClass = `p${inc.priority}`;
       const isSelected = state.selectedIncidentId === inc.incident_id;
-      const etaText = inc.eta_minutes !== null ? `${inc.eta_minutes.toFixed(1)}m` : '—';
+      const etaText = (inc.eta_minutes !== null && inc.eta_minutes !== undefined) ? `${Number(inc.eta_minutes).toFixed(1)} MIN` : '—';
+      const demoStr = (inc.age && inc.gender)
+        ? `${inc.condition || 'EMERGENCY'} — ${inc.age}${String(inc.gender)[0].toUpperCase()}`
+        : (inc.condition || 'GENERAL EMERGENCY');
+      const statusText = inc.status ? inc.status : 'DISPATCHED';
 
       return `
         <div class="incident-card ${pClass} ${isSelected ? 'selected' : ''}" data-id="${inc.incident_id}">
-          <div class="card-header-row">
-            <span class="incident-id-badge">#${inc.incident_id}</span>
-            <span class="priority-pill ${pClass}">P${inc.priority} ${inc.severity}</span>
+          <div class="incident-card-top">
+            <div class="incident-identity">
+              <span class="severity-marker ${pClass}">P${inc.priority}</span>
+              <span class="incident-num font-mono">#${inc.incident_id}</span>
+              ${inc.priority === 1 ? '<span class="status-pulse-dot" title="Active P1 Critical Incident"></span>' : ''}
+            </div>
+            <span class="incident-status-tag status-${statusText.toLowerCase()}">${escapeHtml(statusText)}</span>
           </div>
-          <div class="card-meta-row">
-            <span class="card-detail-tag">
-              <i data-lucide="truck" style="width: 13px; height: 13px;"></i>
-              <span>${inc.ambulance_id || 'Awaiting Unit'}</span>
-            </span>
-            <span class="card-detail-tag">
-              <i data-lucide="building-2" style="width: 13px; height: 13px;"></i>
-              <span>${inc.hospital_id || 'Unassigned'}</span>
-            </span>
-            <span class="eta-tag">${etaText}</span>
+          <div class="incident-headline">${escapeHtml(demoStr.toUpperCase())}</div>
+          <div class="incident-route-row">
+            <span class="route-unit font-mono">${escapeHtml(inc.ambulance_id || 'AWAITING UNIT')}</span>
+            <span class="route-arrow">→</span>
+            <span class="route-dest font-mono">${escapeHtml(inc.hospital_id || 'UNASSIGNED')}</span>
+          </div>
+          <div class="incident-card-bottom">
+            <span class="eta-label">EST. ARRIVAL</span>
+            <span class="eta-figure font-mono ${inc.priority === 1 ? 'urgent' : ''}">ETA ${etaText}</span>
           </div>
         </div>
       `;

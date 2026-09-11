@@ -194,25 +194,32 @@ export class IntegrationController {
   renderCard(container, title, iconName, providerData, eventMetrics, subtitle) {
     if (!container) return;
 
-    const rawStatus = providerData.status || (providerData.healthy ? 'HEALTHY' : 'DISCONNECTED');
-    const status = String(rawStatus).toUpperCase();
-
-    let badgeColor = '#ef4444';
+    const status = providerData.status || (providerData.healthy ? 'HEALTHY' : 'DISCONNECTED');
+    let statusText = status;
+    let badgeColor = 'var(--status-danger)';
     let badgeBg = 'rgba(239, 68, 68, 0.15)';
-    let badgeBorder = '#b91c1c';
+    let badgeBorder = 'rgba(239, 68, 68, 0.3)';
 
     if (status === 'HEALTHY') {
-      badgeColor = '#10b981';
+      statusText = '✓ ONLINE / HEALTHY';
+      badgeColor = 'var(--status-success)';
       badgeBg = 'rgba(16, 185, 129, 0.15)';
-      badgeBorder = '#059669';
+      badgeBorder = 'rgba(16, 185, 129, 0.3)';
     } else if (status === 'DEGRADED') {
-      badgeColor = '#f59e0b';
+      statusText = '⚠️ DEGRADED / ELEVATED LATENCY';
+      badgeColor = 'var(--status-warning)';
       badgeBg = 'rgba(245, 158, 11, 0.15)';
-      badgeBorder = '#d97706';
+      badgeBorder = 'rgba(245, 158, 11, 0.3)';
+    } else if (status === 'DISCONNECTED') {
+      statusText = '⊘ DISCONNECTED / NO FEED';
+      badgeColor = 'var(--status-danger)';
+      badgeBg = 'rgba(239, 68, 68, 0.15)';
+      badgeBorder = 'rgba(239, 68, 68, 0.3)';
     } else if (status === 'NOT_CONFIGURED') {
-      badgeColor = '#94a3b8';
-      badgeBg = 'rgba(148, 163, 184, 0.15)';
-      badgeBorder = '#475569';
+      statusText = '— NOT CONFIGURED';
+      badgeColor = 'var(--text-muted)';
+      badgeBg = 'rgba(148, 163, 184, 0.1)';
+      badgeBorder = 'rgba(148, 163, 184, 0.25)';
     }
 
     const providerId = providerData.provider_id || 'UNKNOWN';
@@ -233,59 +240,60 @@ export class IntegrationController {
     const ingestedCount = eventMetrics.ingested || 0;
 
     container.innerHTML = `
-      <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #1e293b; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; height: 100%; box-sizing: border-box;">
-        <!-- Card Header -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: center; color: #38bdf8;">
-              <i data-lucide="${escapeHtml(iconName)}" style="width: 16px; height: 16px;"></i>
-            </div>
-            <div>
-              <div style="font-weight: 700; color: #f1f5f9; font-size: 12px;">${escapeHtml(title)}</div>
-              <div style="font-size: 10px; color: #64748b;">${escapeHtml(subtitle)}</div>
+      <div class="integration-provider-row" style="background: var(--surface-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 14px 18px; display: grid; grid-template-columns: 280px 180px 1fr 280px; align-items: center; gap: 16px;">
+        <!-- Col 1: Identity & Channel -->
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+          <div style="width: 36px; height: 36px; border-radius: var(--radius-sm); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); flex-shrink: 0;">
+            <i data-lucide="${escapeHtml(iconName)}" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(title)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(subtitle)}</div>
+            <div style="font-size: 9px; font-family: var(--font-mono); color: #64748b; margin-top: 3px;">
+              ID: <span style="color: #94a3b8;">${escapeHtml(providerId)}</span> &bull; TYPE: <span style="color: #94a3b8;">${escapeHtml(providerType)}</span>
             </div>
           </div>
-          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 10px; font-family: var(--font-mono, monospace); color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeBorder};">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor};"></span>
-            ${escapeHtml(status)}
+        </div>
+
+        <!-- Col 2: Operational Health -->
+        <div>
+          <span class="provider-status-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 2px; font-weight: 800; font-size: 10px; font-family: var(--font-mono); color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeBorder}; white-space: nowrap;">
+            ${escapeHtml(statusText)}
           </span>
-        </div>
-
-        <!-- Provider Metadata -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 10px; padding: 6px 8px; background: rgba(30, 41, 59, 0.5); border-radius: 4px;">
-          <div><span style="color: #64748b;">Provider ID:</span> <span style="color: #cbd5e1; font-family: var(--font-mono, monospace);">${escapeHtml(providerId)}</span></div>
-          <div><span style="color: #64748b;">Protocol:</span> <span style="color: #cbd5e1;">${escapeHtml(providerType)}</span></div>
-        </div>
-
-        <!-- Ingestion Telemetry Numbers -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center;">
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 6px; border-radius: 4px; border: 1px solid #1e293b;">
-            <div style="font-size: 9px; color: #64748b;">Ingested</div>
-            <div style="font-weight: 700; color: #38bdf8; font-size: 13px;">${ingestedCount}</div>
-          </div>
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 6px; border-radius: 4px; border: 1px solid #1e293b;">
-            <div style="font-size: 9px; color: #64748b;">Accepted</div>
-            <div style="font-weight: 700; color: #10b981; font-size: 13px;">${acceptedCount}</div>
-          </div>
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 6px; border-radius: 4px; border: 1px solid #1e293b;">
-            <div style="font-size: 9px; color: #64748b;">Duplicates</div>
-            <div style="font-weight: 700; color: #f59e0b; font-size: 13px;">${dupCount}</div>
-          </div>
-          <div style="background: rgba(15, 23, 42, 0.5); padding: 6px; border-radius: 4px; border: 1px solid #1e293b;">
-            <div style="font-size: 9px; color: #64748b;">Rejected</div>
-            <div style="font-weight: 700; color: #ef4444; font-size: 13px;">${rejCount}</div>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono);">
+            Channel: Duplex Stream
           </div>
         </div>
 
-        <!-- Diagnostics & Diagnostics Footer -->
-        <div style="margin-top: auto; font-size: 10px; color: #94a3b8; border-top: 1px solid #1e293b; padding-top: 8px;">
+        <!-- Col 3: Throughput Matrix -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+          <div style="background: rgba(15, 23, 42, 0.6); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 700;">Ingested</div>
+            <div style="font-weight: 800; color: var(--accent-cyan); font-size: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums;">${ingestedCount}</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.6); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 700;">Accepted</div>
+            <div style="font-weight: 800; color: var(--success-emerald); font-size: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums;">${acceptedCount}</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.6); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 700;">Duplicates</div>
+            <div style="font-weight: 800; color: var(--warning-amber); font-size: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums;">${dupCount}</div>
+          </div>
+          <div style="background: rgba(15, 23, 42, 0.6); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.05);">
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; font-weight: 700;">Rejected</div>
+            <div style="font-weight: 800; color: var(--p1-critical); font-size: 14px; font-family: var(--font-mono); font-variant-numeric: tabular-nums;">${rejCount}</div>
+          </div>
+        </div>
+
+        <!-- Col 4: Diagnostics & Buffer Metrics -->
+        <div style="font-size: 10px; color: var(--text-secondary); font-family: var(--font-mono); display: flex; flex-direction: column; gap: 4px;">
           ${errorMsg ? `
-            <div style="color: #f87171; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px;">
+            <div style="color: #f87171; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 2px; padding: 2px 6px;">
               ⚠️ ${errorMsg}
             </div>
           ` : ''}
-          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            ${diagEntries.length > 0 ? diagEntries.join(' &bull; ') : '<span>No provider diagnostics reported.</span>'}
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            ${diagEntries.length > 0 ? diagEntries.map(d => `<div>&bull; ${d}</div>`).join('') : '<div style="color: var(--text-muted);">No provider buffer alerts.</div>'}
           </div>
         </div>
       </div>

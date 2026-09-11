@@ -159,6 +159,49 @@ export function openEmergencyIntakeModal() {
     </div>
 
     <div class="modal-body intake-modal-body">
+      <!-- Operational Dispatch Workflow Progression -->
+      <div class="dispatch-workflow-bar">
+        <div class="workflow-step active">
+          <span class="step-badge">1</span>
+          <div class="step-info">
+            <span class="step-label">CALL INTAKE</span>
+            <span class="step-sub">911 CAD Ingest</span>
+          </div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step active">
+          <span class="step-badge">2</span>
+          <div class="step-info">
+            <span class="step-label">TRIAGE</span>
+            <span class="step-sub">ML Severity</span>
+          </div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <span class="step-badge">3</span>
+          <div class="step-info">
+            <span class="step-label">DISPATCH</span>
+            <span class="step-sub">Fleet Unit</span>
+          </div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <span class="step-badge">4</span>
+          <div class="step-info">
+            <span class="step-label">ROUTE</span>
+            <span class="step-sub">ETA Calc</span>
+          </div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <span class="step-badge">5</span>
+          <div class="step-info">
+            <span class="step-label">HOSPITAL</span>
+            <span class="step-sub">Emergency Dept</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Preset Fill Row -->
       <div class="preset-selector-row">
         <span class="preset-label">Quick Presets:</span>
@@ -170,9 +213,9 @@ export function openEmergencyIntakeModal() {
       </div>
 
       <form id="form-emergency-intake" class="intake-form-grid">
-        <!-- Section 1: Demographics & Clinical Condition -->
+        <!-- Step 1: Call & Patient Demographics -->
         <div class="intake-form-section">
-          <h4>1. Demographics & Condition</h4>
+          <h4><span class="step-num">1</span> CALL &amp; PATIENT DEMOGRAPHICS</h4>
           <div class="form-row-3">
             <div class="form-field">
               <label>Sex</label>
@@ -221,9 +264,9 @@ export function openEmergencyIntakeModal() {
           </div>
         </div>
 
-        <!-- Section 2: Vitals -->
+        <!-- Step 2: Physiological Vitals -->
         <div class="intake-form-section">
-          <h4>2. Measured Vital Signs</h4>
+          <h4><span class="step-num">2</span> PHYSIOLOGICAL VITAL SIGNS</h4>
           <div class="form-row-3">
             <div class="form-field">
               <label>Heart Rate (bpm)</label>
@@ -254,9 +297,9 @@ export function openEmergencyIntakeModal() {
           </div>
         </div>
 
-        <!-- Section 3: Neuro, Oxygen & Severity Indicators -->
+        <!-- Step 3: Clinical & Neurological Assessment -->
         <div class="intake-form-section">
-          <h4>3. Clinical Assessment</h4>
+          <h4><span class="step-num">3</span> CLINICAL ASSESSMENT</h4>
           <div class="form-row-3">
             <div class="form-field">
               <label>Consciousness</label>
@@ -293,9 +336,9 @@ export function openEmergencyIntakeModal() {
           </div>
         </div>
 
-        <!-- Section 4: Symptoms & Comorbidities (0/1) -->
+        <!-- Step 4: Symptoms & Comorbidities -->
         <div class="intake-form-section">
-          <h4>4. Acute Symptoms & Medical History</h4>
+          <h4><span class="step-num">4</span> ACUTE SYMPTOMS &amp; COMORBIDITIES</h4>
           <div class="checkbox-grid">
             <label class="check-item"><input type="checkbox" name="Respiratory_Distress" value="1" /> Resp Distress</label>
             <label class="check-item"><input type="checkbox" name="Chest_Pain" value="1" /> Chest Pain</label>
@@ -308,9 +351,9 @@ export function openEmergencyIntakeModal() {
           </div>
         </div>
 
-        <!-- Section 5: Caller Coordinates -->
+        <!-- Step 5: Incident Coordinates -->
         <div class="intake-form-section">
-          <h4>5. Geographic Location (Jaipur Metropolitan)</h4>
+          <h4><span class="step-num">5</span> INCIDENT LOCATION (JAIPUR METROPOLITAN)</h4>
           <div class="form-row-2">
             <div class="form-field">
               <label>Latitude</label>

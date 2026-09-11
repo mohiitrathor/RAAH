@@ -152,6 +152,33 @@ function renderModalContent(container, explanationResponse) {
   const timeIsoDisplay = evidence.timestamp_iso || '—';
   const actionDisplay = evidence.action || 'OPERATIONAL_DECISION';
 
+  // Executive Decision Banner (Visually prioritized: AMB_XXXX → HOSP_YYYY | CRITICAL / P1 / 97.8%)
+  const primaryUnit = evidence.selected_ambulance_id || 'AMB_UNASSIGNED';
+  const primaryHosp = evidence.selected_hospital_id || 'HOSP_UNASSIGNED';
+  const severityStr = evidence.severity ? evidence.severity.toUpperCase() : 'CRITICAL';
+  const priorityStr = evidence.priority ? `P${evidence.priority}` : 'P1';
+  const confStr = (evidence.confidence !== null && evidence.confidence !== undefined)
+    ? `${(evidence.confidence * 100).toFixed(1)}%`
+    : '—';
+
+  const executiveBannerHtml = `
+    <div class="decision-executive-banner">
+      <div class="banner-vector-group">
+        <span class="banner-micro-label">PRIMARY DISPATCH ALLOCATION</span>
+        <div class="banner-vector">
+          <span class="vector-unit font-mono">${escapeHtml(primaryUnit)}</span>
+          <span class="vector-arrow">→</span>
+          <span class="vector-dest font-mono">${escapeHtml(primaryHosp)}</span>
+        </div>
+      </div>
+      <div class="banner-triage-group">
+        <span class="banner-badge badge-severity ${severityStr === 'CRITICAL' ? 'critical' : ''}">${escapeHtml(severityStr)}</span>
+        <span class="banner-badge badge-priority">${escapeHtml(priorityStr)}</span>
+        <span class="banner-badge badge-conf font-mono">${confStr}</span>
+      </div>
+    </div>
+  `;
+
   // 1. Clinical Evidence Section
   const hasClinical = evidence.severity || evidence.patient_condition || evidence.priority || (evidence.confidence !== null && evidence.confidence !== undefined);
   const clinicalHtml = hasClinical ? `
@@ -182,7 +209,7 @@ function renderModalContent(container, explanationResponse) {
         ${evidence.confidence !== null && evidence.confidence !== undefined ? `
           <div class="clinical-chip">
             <span class="chip-label">Model Confidence</span>
-            <span class="chip-val">${(evidence.confidence * 100).toFixed(1)}%</span>
+            <span class="chip-val font-mono">${(evidence.confidence * 100).toFixed(1)}%</span>
           </div>
         ` : ''}
         ${evidence.severity_source ? `
@@ -287,14 +314,14 @@ function renderModalContent(container, explanationResponse) {
     </div>
   `;
 
-  // 4. Alternatives Considered Section (RULE B)
+  // 4. Alternatives Considered Section (Honest distinction per Rule B and Adjustment #1)
   let alternativesHtml = '';
-  if (evidence.alternatives_available === true && evidence.alternatives && evidence.alternatives.length > 0) {
+  if (evidence.alternatives_available === true && Array.isArray(evidence.alternatives) && evidence.alternatives.length > 0) {
     alternativesHtml = `
       <div class="evidence-section">
         <div class="evidence-section-title">
           <i data-lucide="git-branch"></i>
-          <span>Evaluated Alternatives (${evidence.alternatives.length})</span>
+          <span>Evaluated Alternative Candidates (${evidence.alternatives.length})</span>
         </div>
         <div class="alternatives-table-container">
           <table class="alternatives-table">
@@ -338,7 +365,10 @@ function renderModalContent(container, explanationResponse) {
         </div>
         <div class="alternatives-unavailable-box">
           <i data-lucide="info"></i>
-          <span>Alternatives not available from the dispatch evidence source.</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 11px;">NO ALTERNATIVE DISPATCH CANDIDATES EVALUATED</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Initial dispatch constraint solved deterministically on single primary unit. Comparative alternatives are unavailable from the dispatch evidence source.</div>
+          </div>
         </div>
       </div>
     `;
@@ -380,6 +410,9 @@ function renderModalContent(container, explanationResponse) {
       </div>
 
       <div class="modal-body tactical-scrollable">
+        <!-- Executive Decision Banner -->
+        ${executiveBannerHtml}
+
         <!-- Metadata bar -->
         <div class="evidence-meta-bar">
           <div class="meta-bar-item">
@@ -400,22 +433,33 @@ function renderModalContent(container, explanationResponse) {
           </div>
         </div>
 
-        <!-- Deterministic Operational Explanation -->
+        <!-- 1. Primary Operational Decision (Units, ETA, Distance) -->
+        ${entitiesHtml}
+
+        <!-- 2. Clinical Evaluation & ML Severity -->
+        ${clinicalHtml}
+
+        <!-- 3. Policy & Operational Constraints Evaluated -->
+        ${constraintsHtml}
+
+        <!-- 4. Deterministic Rationale Summary Narrative -->
         <div class="evidence-section">
           <div class="evidence-section-title">
             <i data-lucide="align-left"></i>
-            <span>Deterministic Rationale Summary</span>
+            <span>Deterministic Rationale Narrative</span>
           </div>
-          <div class="explanation-highlight-box">
-            <p>${escapeHtml(explanation)}</p>
+          <div class="explanation-highlight-box" style="font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--text-secondary); background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-subtle); border-left: 3px solid var(--text-cyan); padding: 10px 14px; border-radius: 4px;">
+            ${escapeHtml(explanation)}
           </div>
         </div>
 
-        ${clinicalHtml}
-        ${entitiesHtml}
-        ${constraintsHtml}
+        <!-- 5. Evaluated Alternatives -->
         ${alternativesHtml}
+
+        <!-- 6. Policy & Governance Context -->
         ${policyHtml}
+
+        <!-- 7. Provenance & Audit Metadata -->
         ${metadataHtml}
       </div>
 

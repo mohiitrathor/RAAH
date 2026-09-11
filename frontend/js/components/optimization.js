@@ -275,13 +275,18 @@ export class OptimizationController {
       }
 
       // Render Policy History
-      if (this.dom.listPolicyHistory && policyHistory) {
-        this.dom.listPolicyHistory.innerHTML = policyHistory.map(v => `
-          <div style="margin-bottom: 4px; border-bottom: 1px dashed #334155; padding-bottom: 2px;">
-            <span style="font-weight: 700; color: #38bdf8;">${v.version}</span>: ${v.change_reason || 'Configuration update'}
-            <span style="color: #64748b;">(${v.approved_by || 'OP'})</span>
-          </div>
-        `).join('');
+      if (this.dom.listPolicyHistory && Array.isArray(policyHistory)) {
+        this.dom.listPolicyHistory.innerHTML = policyHistory.length > 0
+          ? policyHistory.map(v => `
+            <div class="policy-history-item">
+              <div>
+                <span class="badge badge-subtle font-mono" style="margin-right: 6px;">${v.version}</span>
+                <span style="color: var(--text-primary); font-size: 11px;">${v.change_reason || 'Configuration update'}</span>
+              </div>
+              <span class="font-mono text-muted" style="font-size: 10px;">${v.approved_by || 'OP'}</span>
+            </div>
+          `).join('')
+          : '<div class="empty-operational-state" style="padding: 12px;">No historical policy mutations recorded.</div>';
       }
 
       this.currentRecommendations = recs;
