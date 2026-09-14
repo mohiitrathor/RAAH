@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         description="Public title of the FastAPI application",
     )
     app_version: str = Field(
-        default="0.1.0",
+        default="1.0.0",
         description="Application version string",
     )
     environment: str = Field(

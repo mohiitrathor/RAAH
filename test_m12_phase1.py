@@ -63,7 +63,7 @@ def test_01_default_settings_load():
     """Verify that default settings instantiate cleanly with production defaults."""
     s = Settings()
     assert s.app_name == "RAAH — Emergency Dispatch & Coordination Platform"
-    assert s.app_version == "0.1.0"
+    assert s.app_version == "1.0.0"
     assert s.port == 8000
     assert s.host == "0.0.0.0"
     assert s.simulation_tick_interval_seconds == 1.0
