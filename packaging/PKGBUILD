@@ -1,0 +1,47 @@
+# Maintainer: RAAH Development Team
+pkgname=raah-desktop
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="RAAH — Emergency Medical Dispatch & Tactical Coordination Platform Desktop Application"
+arch=('x86_64')
+url="https://github.com/mohiitrathor/RAAH"
+license=('Proprietary')
+depends=('python' 'python-gobject' 'gtk3' 'webkit2gtk-4.1')
+optdepends=(
+    'miniconda3: For backend AI/ML environment'
+)
+
+package() {
+    # 1. Install application tree to /opt/raah
+    install -dm755 "${pkgdir}/opt/raah"
+    cp -r "${srcdir}/.."/* "${pkgdir}/opt/raah/"
+
+    # Remove non-distribution directories
+    rm -rf "${pkgdir}/opt/raah/.git" \
+           "${pkgdir}/opt/raah/dist" \
+           "${pkgdir}/opt/raah/src" \
+           "${pkgdir}/opt/raah/pkg"
+
+    # 2. Install binary launcher to /usr/bin/raah-desktop
+    install -dm755 "${pkgdir}/usr/bin"
+    ln -sf /opt/raah/bin/raah-desktop "${pkgdir}/usr/bin/raah-desktop"
+
+    # 3. Install desktop entry
+    install -Dm644 "${pkgdir}/opt/raah/desktop/raah.desktop" \
+                   "${pkgdir}/usr/share/applications/raah.desktop"
+
+    # Fix Exec line for system installation
+    sed -i 's|Exec=.*bin/raah-desktop|Exec=/usr/bin/raah-desktop|g' \
+           "${pkgdir}/usr/share/applications/raah.desktop"
+
+    # 4. Install icons
+    for sz in 16 32 48 64 128 256 512; do
+        if [ -f "${pkgdir}/opt/raah/desktop/assets/icons/raah_${sz}x${sz}.png" ]; then
+            install -Dm644 "${pkgdir}/opt/raah/desktop/assets/icons/raah_${sz}x${sz}.png" \
+                           "${pkgdir}/usr/share/icons/hicolor/${sz}x${sz}/apps/raah.png"
+        fi
+    done
+
+    install -Dm644 "${pkgdir}/opt/raah/desktop/assets/raah.svg" \
+                   "${pkgdir}/usr/share/icons/hicolor/scalable/apps/raah.svg"
+}

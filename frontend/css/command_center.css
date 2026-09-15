@@ -1342,23 +1342,61 @@ body:has(#bottom-drawer.collapsed) #command-workspace.workspace--active,
 }
 
 #replay-leaflet-map .leaflet-tile-pane,
-#replay-leaflet-map .leaflet-tile-pane img.leaflet-tile {
-  filter: brightness(0.72) contrast(1.2) saturate(0.4) hue-rotate(195deg) !important;
-}
-
-#replay-leaflet-map .leaflet-overlay-pane,
-#replay-leaflet-map .leaflet-marker-pane,
-#replay-leaflet-map .leaflet-shadow-pane {
-  filter: none !important;
-}
-
-#leaflet-map .leaflet-container {
-  background: #040711 !important;
-}
-
+#replay-leaflet-map .leaflet-tile-pane img.leaflet-tile,
 #leaflet-map .leaflet-tile-pane,
 #leaflet-map img.leaflet-tile {
-  filter: brightness(0.22) contrast(1.6) saturate(0.25) hue-rotate(195deg) !important;
+  filter: none;
+}
+
+/* Tactical Dark Inversion for layers with .tiles--tactical-dark or .tiles--tactical-invert */
+.leaflet-tile.tiles--tactical-dark,
+.tiles--tactical-dark .leaflet-tile,
+.tiles--tactical-dark img.leaflet-tile,
+.leaflet-tile.tiles--tactical-invert,
+.tiles--tactical-invert .leaflet-tile,
+.tiles--tactical-invert img.leaflet-tile {
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(96%) !important;
+}
+
+/* Contrast boost for CARTO Dark Matter */
+.leaflet-tile.tiles--carto-boost,
+.tiles--carto-boost .leaflet-tile,
+.tiles--carto-boost img.leaflet-tile {
+  filter: brightness(1.25) contrast(1.35) !important;
+}
+
+#leaflet-map .leaflet-container,
+#replay-leaflet-map .leaflet-container {
+  background: #0b0f19 !important;
+}
+
+/* Tactical Layer Control Styling */
+.leaflet-control-layers {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border: 1px solid var(--border-subtle, #1e293b) !important;
+  border-radius: 6px !important;
+  color: var(--text-primary, #f8fafc) !important;
+  font-family: var(--font-sans, system-ui) !important;
+  font-size: 11px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-layers-expanded {
+  padding: 8px 12px !important;
+}
+
+.leaflet-control-layers-base label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 4px !important;
+  cursor: pointer !important;
+}
+
+.leaflet-control-layers-toggle {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  border-radius: 4px !important;
 }
 
 .leaflet-control-attribution {

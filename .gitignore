@@ -21,3 +21,9 @@ ENV/
 *.db
 *.db-wal
 *.db-shm
+
+# Build distribution and runtime logs
+dist/
+data/logs/
+*.log
+

@@ -91,6 +91,17 @@ async function renderDrawerContent(incident) {
   const etaDisplay = incident.eta_minutes !== null ? `${incident.eta_minutes.toFixed(1)} min` : '—';
   const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE';
 
+  const allHospitals = Array.from((store.state.hospitals && store.state.hospitals.values()) || []);
+  const suitableHospitals = allHospitals
+    .filter(h => {
+      if (String(h.hospital_id) === String(incident.hospital_id)) return false;
+      if (h.is_full || h.available_beds <= 0) return false;
+      if (incident.severity === 'Critical' && h.available_icu <= 0) return false;
+      return true;
+    })
+    .sort((a, b) => b.available_beds - a.available_beds)
+    .slice(0, 40);
+
   drawerElement.innerHTML = `
     <div class="drawer-header">
       <div class="drawer-title-group">
@@ -278,6 +289,15 @@ async function renderDrawerContent(incident) {
           <i data-lucide="shield-alert"></i>
           <span>Operator Override Controls</span>
         </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">
+            Destination Override Facility:
+          </label>
+          <select id="select-reroute-hospital" class="tactical-select" style="width: 100%; font-size: 11px; padding: 6px 8px; background: var(--bg-surface-2, #1e293b); color: var(--text-primary, #f8fafc); border: 1px solid var(--border-subtle, #334155); border-radius: 4px;" ${!isEnRoute ? 'disabled' : ''}>
+            <option value="">Auto-Assign Best Available Facility</option>
+            ${suitableHospitals.map(h => `<option value="${h.hospital_id}">${h.hospital_id} (${h.hospital_type}) — ${h.available_beds} beds${incident.severity === 'Critical' ? ` / ${h.available_icu} ICU` : ''}</option>`).join('')}
+          </select>
+        </div>
         <div class="operator-btn-row">
           <button class="btn-tactical btn-evaluate" id="btn-eval-reroute" ${!isEnRoute ? 'disabled' : ''}>
             <i data-lucide="search"></i> Evaluate Reroute
@@ -309,6 +329,7 @@ async function renderDrawerContent(incident) {
   // Bind Evaluate Reroute
   const btnEval = drawerElement.querySelector('#btn-eval-reroute');
   const evalCard = drawerElement.querySelector('#eval-result-card');
+  const selectHosp = drawerElement.querySelector('#select-reroute-hospital');
 
   btnEval.addEventListener('click', async () => {
     btnEval.disabled = true;
@@ -333,7 +354,11 @@ async function renderDrawerContent(incident) {
             ${evalRes.eta_saved !== null ? `<div>Estimated Time Saved: <strong class="text-success">${evalRes.eta_saved} min</strong></div>` : ''}
           </div>
         `;
+        if (selectHosp && !selectHosp.value) {
+          selectHosp.value = alt.hospital_id;
+        }
       } else {
+        const alt = evalRes.alternative_hospital;
         evalCard.className = 'eval-result-card not-recommended';
         evalCard.innerHTML = `
           <div class="eval-header text-success">
@@ -341,7 +366,8 @@ async function renderDrawerContent(incident) {
             <strong>Current Destination Optimal</strong>
           </div>
           <div class="eval-detail">
-            <div>Reason: ${evalRes.reason || 'Current route remains fastest compatible facility.'}</div>
+            <div>Status: ${evalRes.reason || 'Current route remains fastest compatible facility.'}</div>
+            ${alt ? `<div style="margin-top: 4px;">Best Alternative Facility: <strong>${alt.hospital_id}</strong> (${alt.hospital_type}) — Beds: <strong>${alt.available_beds}</strong>${alt.eta !== null ? ` | ETA: <strong>${alt.eta.toFixed(1)}m</strong>` : ''}</div>` : ''}
           </div>
         `;
       }
@@ -358,10 +384,13 @@ async function renderDrawerContent(incident) {
   // Bind Execute Reroute
   const btnExec = drawerElement.querySelector('#btn-exec-reroute');
   btnExec.addEventListener('click', async () => {
+    const selectedHospId = selectHosp && selectHosp.value ? selectHosp.value : null;
+    const targetDesc = selectedHospId ? `Hospital ${selectedHospId}` : 'the best available alternative hospital';
+
     // Open in-app tactical confirmation modal (zero window.confirm)
     const confirmed = await confirmModal({
       title: `Reroute Incident #${incident.incident_id}`,
-      message: `Are you sure you want to reroute Ambulance ${ambulance ? ambulance.ambulance_id : ''} to an alternative hospital? This will update the operational destination and log an operator override decision.`,
+      message: `Are you sure you want to reroute Ambulance ${ambulance ? ambulance.ambulance_id : ''} to ${targetDesc}? This will update the operational destination and log an operator override decision.`,
       confirmText: 'Execute Reroute',
       cancelText: 'Cancel',
       danger: true,
@@ -372,7 +401,10 @@ async function renderDrawerContent(incident) {
     btnExec.disabled = true;
 
     try {
-      const decision = await api.applyRedirection(incident.incident_id, null, 'Dispatcher initiated reroute');
+      const reason = selectedHospId
+        ? `Dispatcher manual reroute to ${selectedHospId}`
+        : 'Dispatcher initiated reroute';
+      const decision = await api.applyRedirection(incident.incident_id, selectedHospId, reason);
 
       // Refresh live telemetry
       const dash = await api.getDashboard();

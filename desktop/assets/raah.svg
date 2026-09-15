@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0f1d36"/>
+      <stop offset="70%" stop-color="#090e1c"/>
+      <stop offset="100%" stop-color="#04070e"/>
+    </radialGradient>
+
+    <!-- Emerald-Cyan Glow for Cross -->
+    <linearGradient id="crossGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe"/>
+      <stop offset="50%" stop-color="#00c6ff"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+
+    <!-- Pulse Line Gradient -->
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.2"/>
+      <stop offset="30%" stop-color="#22d3ee" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#22d3ee" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.2"/>
+    </linearGradient>
+
+    <!-- Outer Ring Gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <!-- Drop Shadows / Glows -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10" result="blur1"/>
+      <feGaussianBlur stdDeviation="20" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="intenseGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base Circle Background with tactical border -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="url(#ringGrad)" stroke-width="3" opacity="0.6"/>
+
+  <!-- Tactical Radar Rings -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <circle cx="256" cy="256" r="165" fill="none" stroke="#0ea5e9" stroke-width="1" opacity="0.25"/>
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#10b981" stroke-width="1" opacity="0.2"/>
+
+  <!-- Compass / Crosshair Ticks -->
+  <line x1="256" y1="48" x2="256" y2="70" stroke="#00f2fe" stroke-width="3" stroke-linecap="round"/>
+  <line x1="256" y1="442" x2="256" y2="464" stroke="#00f2fe" stroke-width="3" stroke-linecap="round"/>
+  <line x1="48" y1="256" x2="70" y2="256" stroke="#00f2fe" stroke-width="3" stroke-linecap="round"/>
+  <line x1="442" y1="256" x2="464" y2="256" stroke="#00f2fe" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Corner Radar Marks -->
+  <path d="M 80 120 L 80 80 L 120 80" fill="none" stroke="#0ea5e9" stroke-width="2.5" opacity="0.4"/>
+  <path d="M 432 120 L 432 80 L 392 80" fill="none" stroke="#0ea5e9" stroke-width="2.5" opacity="0.4"/>
+  <path d="M 80 392 L 80 432 L 120 432" fill="none" stroke="#0ea5e9" stroke-width="2.5" opacity="0.4"/>
+  <path d="M 432 392 L 432 432 L 392 432" fill="none" stroke="#0ea5e9" stroke-width="2.5" opacity="0.4"/>
+
+  <!-- Tactical Emergency Medical Cross -->
+  <g filter="url(#neonGlow)">
+    <!-- Vertical Bar -->
+    <rect x="216" y="116" width="80" height="280" rx="20" fill="url(#crossGrad)"/>
+    <!-- Horizontal Bar -->
+    <rect x="116" y="216" width="280" height="80" rx="20" fill="url(#crossGrad)"/>
+  </g>
+
+  <!-- Inner Darker Cross Cutout Core for Depth -->
+  <rect x="228" y="128" width="56" height="256" rx="14" fill="#08101e" opacity="0.65"/>
+  <rect x="128" y="228" width="256" height="56" rx="14" fill="#08101e" opacity="0.65"/>
+
+  <!-- Central Real-Time ECG / Telemetry Pulse -->
+  <g filter="url(#intenseGlow)">
+    <polyline points="
+      120,256
+      180,256
+      202,256
+      216,210
+      232,310
+      248,168
+      266,334
+      282,230
+      296,270
+      308,256
+      392,256"
+      fill="none"
+      stroke="url(#pulseGrad)"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- Vital Signs Beacon Nodes -->
+  <circle cx="248" cy="168" r="5" fill="#ffffff" filter="url(#intenseGlow)"/>
+  <circle cx="266" cy="334" r="4.5" fill="#22d3ee" filter="url(#intenseGlow)"/>
+  <circle cx="216" cy="210" r="4" fill="#10b981" filter="url(#intenseGlow)"/>
+
+  <!-- Tactical Typography: RAAH Lettermark -->
+  <g transform="translate(256, 420)">
+    <text x="0" y="0"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          font-size="28"
+          font-weight="900"
+          letter-spacing="10"
+          text-anchor="middle"
+          fill="#38bdf8"
+          filter="url(#intenseGlow)">RAAH</text>
+    <text x="0" y="16"
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+          font-size="9"
+          font-weight="700"
+          letter-spacing="4"
+          text-anchor="middle"
+          fill="#94a3b8">COMMAND CENTER</text>
+  </g>
+</svg>

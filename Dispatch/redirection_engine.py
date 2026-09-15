@@ -108,6 +108,7 @@ def hospital_score(
 def find_best_alternative(
     state,
     incident,
+    exclude_hospital_ids=None,
 ):
 
     ambulance = None
@@ -122,14 +123,26 @@ def find_best_alternative(
 
     candidates = []
 
+    excluded = set()
+    if incident.hospital_id:
+        excluded.add(str(incident.hospital_id))
+    if exclude_hospital_ids:
+        if isinstance(exclude_hospital_ids, (set, list, tuple)):
+            excluded.update(str(x) for x in exclude_hospital_ids)
+        else:
+            excluded.add(str(exclude_hospital_ids))
+
     for hospital in (
         state.hospitals.values()
     ):
 
+        if str(hospital.hospital_id) in excluded:
+            continue
+
         if not hospital_is_suitable(
             hospital,
             incident.severity,
-            incident.hospital_id,
+            None,
         ):
             continue
 
@@ -346,14 +359,62 @@ def evaluate_redirection(
     # explicitly triggered by ETA deterioration.
     # ----------------------------------------------------------
 
+    if trigger_reason in ("OPERATOR_OVERRIDE", "MANUAL"):
+        alternative = find_best_alternative(
+            state,
+            incident,
+        )
+        if alternative is None:
+            return {
+                "redirect": False,
+                "reason": "No suitable alternative hospital available.",
+                "alternative_hospital": None,
+            }
+
+        hospital = alternative["hospital"]
+        new_eta = alternative["eta"]
+        improvement = round((current_eta - new_eta), 2) if (current_eta is not None and new_eta is not None) else 0.0
+
+        return {
+            "redirect": True,
+            "reason": "Operator manual redirection override.",
+            "trigger": "OPERATOR_OVERRIDE",
+            "alternative_hospital": {
+                "hospital_id": hospital.hospital_id,
+                "hospital_type": hospital.hospital_type,
+                "available_beds": hospital.available_beds,
+                "available_icu": hospital.available_icu,
+                "score": alternative["score"],
+                "eta": new_eta,
+            },
+            "eta_before": current_eta,
+            "eta_after": new_eta,
+            "eta_saved": improvement,
+            "eta_improvement_percent": round(((improvement / max(current_eta, 1)) * 100), 2) if (current_eta and current_eta > 0) else 0.0,
+        }
+
     if trigger_reason != "ETA_DETERIORATION":
+
+        # Identify best alternative facility for informational situational awareness
+        alt_info = find_best_alternative(state, incident)
+        alt_dict = None
+        if alt_info:
+            h = alt_info["hospital"]
+            alt_dict = {
+                "hospital_id": h.hospital_id,
+                "hospital_type": h.hospital_type,
+                "available_beds": h.available_beds,
+                "available_icu": h.available_icu,
+                "score": alt_info["score"],
+                "eta": alt_info["eta"],
+            }
 
         return {
             "redirect": False,
             "reason": (
                 "Current hospital remains suitable."
             ),
-            "alternative_hospital": None,
+            "alternative_hospital": alt_dict,
         }
 
     alternative = find_best_alternative(

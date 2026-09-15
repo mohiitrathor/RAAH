@@ -56,7 +56,7 @@ from dispatch_engine import (
     SEVERITY_PRIORITY,
     AMBULANCE_CAPABILITY,
 )
-from redirection_engine import check_live_redirection
+from redirection_engine import check_live_redirection, find_best_alternative
 from events import EventEngine
 
 from state import (
@@ -2650,6 +2650,20 @@ class Simulator:
             # Dynamic alternative selection via redirection engine
             eval_result = check_live_redirection(self.state, incident_id)
             alt = eval_result.get("alternative_hospital")
+            if not alt:
+                history_excluded = self.redirect_history.get(incident_id, set())
+                best_alt = find_best_alternative(self.state, incident, exclude_hospital_ids=history_excluded)
+                if best_alt:
+                    h = best_alt["hospital"]
+                    alt = {
+                        "hospital_id": h.hospital_id,
+                        "Hospital_ID": h.hospital_id,
+                        "hospital_type": h.hospital_type,
+                        "available_beds": h.available_beds,
+                        "available_icu": h.available_icu,
+                        "score": best_alt["score"],
+                        "eta": best_alt["eta"],
+                    }
             if not alt:
                 raise ValueError("No suitable alternative hospital available for redirection.")
             new_hospital_id = str(alt.get("Hospital_ID") or alt.get("hospital_id"))

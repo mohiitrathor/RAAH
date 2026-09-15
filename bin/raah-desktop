@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# RAAH Command Center — Desktop Launcher
+# ==============================================================================
+# Launches RAAH in its dedicated native desktop window.
+# Automatically detects runtime environments and supervises the backend.
+# ==============================================================================
+
+set -eo pipefail
+
+# 1. Resolve repository directory regardless of execution context or symlinks
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "${SOURCE}" ]; do
+    DIR="$(cd -P "$(dirname "${SOURCE}")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "${SOURCE}")"
+    [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "${SOURCE}")" >/dev/null 2>&1 && pwd)"
+REPO_DIR="$(cd -P "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd)"
+cd "${REPO_DIR}"
+
+# 2. Ensure log directory exists
+mkdir -p "${REPO_DIR}/data/logs"
+
+# 3. Locate Python interpreter with GTK3 and WebKit2
+GUI_PYTHON=""
+CANDIDATES=(
+    "/usr/bin/python3"
+    "$(which python3 2>/dev/null || true)"
+    "$(which python 2>/dev/null || true)"
+)
+
+for CAND in "${CANDIDATES[@]}"; do
+    if [ -n "${CAND}" ] && [ -x "${CAND}" ]; then
+        if "${CAND}" -c "import gi; gi.require_version('Gtk', '3.0'); gi.require_version('WebKit2', '4.1'); from gi.repository import Gtk, WebKit2" 2>/dev/null; then
+            GUI_PYTHON="${CAND}"
+            break
+        fi
+    fi
+done
+
+if [ -z "${GUI_PYTHON}" ]; then
+    # If no WebKit2 found, try fallback warning
+    MSG="Unable to find Python with GTK 3.0 and WebKit2 4.1.\nPlease ensure PyGObject and webkit2gtk are installed."
+    echo -e "[RAAH ERROR] ${MSG}" >&2
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "RAAH Desktop Error" "${MSG}" --urgency=critical
+    fi
+    exit 1
+fi
+
+# 4. Hint backend Python if RAAH_PYTHON is unset
+if [ -z "${RAAH_PYTHON}" ]; then
+    for ENV_CAND in \
+        "${HOME}/miniconda3/envs/ai_env/bin/python" \
+        "${HOME}/anaconda3/envs/ai_env/bin/python" \
+        "${HOME}/.conda/envs/ai_env/bin/python" \
+        "/home/glitchedpotato/miniconda3/envs/ai_env/bin/python" \
+        "${REPO_DIR}/.venv/bin/python" \
+        "${REPO_DIR}/venv/bin/python"; do
+        if [ -x "${ENV_CAND}" ]; then
+            export RAAH_PYTHON="${ENV_CAND}"
+            break
+        fi
+    done
+fi
+
+# 5. Launch Desktop Application
+exec "${GUI_PYTHON}" "${REPO_DIR}/desktop/app.py" "$@"

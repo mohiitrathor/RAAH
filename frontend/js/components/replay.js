@@ -81,12 +81,31 @@ export class ReplayController {
       attributionControl: true,
     });
 
-    // High-readability tactical base tiles (public raster service with attribution, no credentials required)
-    window.L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 18,
-      maxNativeZoom: 16,
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-    }).addTo(this.replayMap);
+    const replayGoogle = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: '0123',
+      attribution: '&copy; Google Maps',
+    });
+
+    const replayTactical = window.L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: '0123',
+      className: 'tiles--tactical-invert',
+      attribution: '&copy; Google Maps',
+    });
+
+    const replayOSM = window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    });
+
+    replayTactical.addTo(this.replayMap);
+
+    window.L.control.layers({
+      'Google Maps (Tactical Dark)': replayTactical,
+      'Google Maps (Roadmap Light)': replayGoogle,
+      'OpenStreetMap': replayOSM,
+    }, null, { position: 'topright' }).addTo(this.replayMap);
   }
 
   bindEvents() {

@@ -36,12 +36,61 @@ class TacticalMap {
       attributionControl: true,
     });
 
-    // High-readability tactical base tiles (public raster service with attribution, no credentials required)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    // Base tile layers:
+    // 1. Google Maps (Roads & Streets) — high-visibility street network, highways, landmarks
+    const googleRoads = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: '0123',
+      attribution: '&copy; Google Maps',
+    });
+
+    // 2. Google Maps (Tactical Dark) — inverted glowing streets on dark HUD background
+    const googleTactical = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: '0123',
+      className: 'tiles--tactical-invert',
+      attribution: '&copy; Google Maps',
+    });
+
+    // 3. OpenStreetMap — classic open cartography with rich local streets
+    const osmStreets = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    });
+
+    // 4. CARTO Dark Matter — minimalist dark theme
+    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    });
+
+    // 5. ArcGIS Minimalist
+    const arcgisDark = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18,
       maxNativeZoom: 16,
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-    }).addTo(this.map);
+      attribution: 'Tiles &copy; Esri',
+    });
+
+    // Default to Google Maps (Tactical Dark) for dark theme with clear streets
+    googleTactical.addTo(this.map);
+
+    // Add layer selector control so operator can switch views
+    L.control.layers({
+      'Google Maps (Tactical Dark)': googleTactical,
+      'Google Maps (Roadmap Light)': googleRoads,
+      'OpenStreetMap': osmStreets,
+      'CARTO Dark': cartoDark,
+      'ArcGIS Minimalist': arcgisDark,
+    }, null, { position: 'topright' }).addTo(this.map);
+
+    // Auto-invalidate map size when loaded or window resizes
+    setTimeout(() => {
+      this.map.invalidateSize();
+    }, 200);
+    window.addEventListener('resize', () => {
+      this.map.invalidateSize();
+    });
 
     // Layer groups for clean management
     this.hospitalsLayer = L.layerGroup().addTo(this.map);
