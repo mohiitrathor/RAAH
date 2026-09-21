@@ -170,7 +170,7 @@ export function setupDecisions() {
 
   // Subscribe to store updates to trigger debounced refreshes when new events arrive
   store.subscribe((state, changedKeys) => {
-    if (changedKeys.includes('activityFeed') || changedKeys.includes('decisions') || changedKeys.includes('activeIncidents')) {
+    if (changedKeys.includes('activityFeed') || changedKeys.includes('decisions')) {
       debouncedRefresh();
     }
   });

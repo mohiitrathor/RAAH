@@ -142,10 +142,20 @@ async function bootstrap() {
     store.updateFromDashboard(dashboard);
     store.setDecisions(decisions);
 
-    // If initial active incidents exist, fetch ambulances immediately
+    // If initial active incidents exist, fetch ambulances immediately and resume 1x realtime
     if (dashboard.fleet && dashboard.fleet.en_route > 0) {
       const ambulances = await api.getAmbulances();
       store.setAmbulances(ambulances);
+
+      if (!rtStatus.is_running) {
+        try {
+          await api.startRealtime(1.0, 1.0 / 60.0);
+          const newStatus = await api.getRealtimeStatus();
+          store.updateRealtimeStatus(newStatus);
+        } catch (e) {
+          console.debug('Autostart realtime on bootstrap:', e);
+        }
+      }
     }
   } catch (err) {
     console.error('Initial backend connection failed:', err);
@@ -246,9 +256,22 @@ function initRealtimeStream() {
 
         case 'INCIDENT_DISPATCHED':
           if (event.payload) {
-            store.addOrUpdateIncident(event.payload);
             const ambId = event.payload.ambulance_id || (event.payload.ambulance ? event.payload.ambulance.ambulance_id : 'unit');
             const hospId = event.payload.hospital_id || (event.payload.hospital ? event.payload.hospital.hospital_id : 'facility');
+            const normalizedIncident = {
+              ...event.payload,
+              ambulance_id: ambId,
+              hospital_id: hospId,
+              status: event.payload.status === 'DISPATCH_RECOMMENDED' ? 'DISPATCHED' : (event.payload.status || 'DISPATCHED'),
+            };
+            store.addOrUpdateIncident(normalizedIncident);
+            if (event.payload.ambulance) {
+              store.updateAmbulances([{
+                ...event.payload.ambulance,
+                status: 'EN_ROUTE',
+                hospital_id: hospId,
+              }]);
+            }
             store.addActivityEntry({
               type: 'DISPATCH',
               badge: 'DISPATCH',

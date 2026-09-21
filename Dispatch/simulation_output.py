@@ -323,11 +323,14 @@ class SimulationOutput:
 
         return [
             {
-                "time": int(
-                    event.get(
-                        "time",
-                        0,
-                    )
+                "time": round(
+                    float(
+                        event.get(
+                            "time",
+                            0,
+                        )
+                    ),
+                    2,
                 ),
 
                 "message": str(
@@ -382,9 +385,7 @@ class SimulationOutput:
         )
 
         return {
-            "time": int(
-                state.current_time
-            ),
+            "time": int(state.current_time),
 
             "incidents": incidents,
 
@@ -463,9 +464,7 @@ class SimulationOutput:
             })
 
         return {
-            "time": int(
-                state.current_time
-            ),
+            "time": int(state.current_time),
 
             "active_incidents": (
                 active_incidents

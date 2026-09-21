@@ -56,7 +56,7 @@ export const dispatchLive = (customData) =>
 // --- Simulation Controls ---
 export const getRealtimeStatus = () => request('/simulation/realtime/status');
 
-export const startRealtime = (tickInterval = 1.0, minutesPerTick = 1) =>
+export const startRealtime = (tickInterval = 1.0, minutesPerTick = (1.0 / 60.0)) =>
   request('/simulation/realtime/start', {
     method: 'POST',
     body: JSON.stringify({

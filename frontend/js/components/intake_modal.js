@@ -137,11 +137,23 @@ const CLINICAL_PRESETS = [
   },
 ];
 
+function getRandomJaipurCoords() {
+  // Jaipur metropolitan distribution ~8km radius
+  const latOffset = (Math.random() - 0.5) * 0.08;
+  const lonOffset = (Math.random() - 0.5) * 0.08;
+  return {
+    lat: Number((26.9124 + latOffset).toFixed(4)),
+    lon: Number((75.7873 + lonOffset).toFixed(4)),
+  };
+}
+
 export function openEmergencyIntakeModal() {
   if (intakeModalElement) {
     document.body.removeChild(intakeModalElement);
     intakeModalElement = null;
   }
+
+  const defaultCoords = getRandomJaipurCoords();
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop visible';
@@ -353,15 +365,20 @@ export function openEmergencyIntakeModal() {
 
         <!-- Step 5: Incident Coordinates -->
         <div class="intake-form-section">
-          <h4><span class="step-num">5</span> INCIDENT LOCATION (JAIPUR METROPOLITAN)</h4>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <h4 style="margin:0;"><span class="step-num">5</span> INCIDENT LOCATION (JAIPUR METROPOLITAN)</h4>
+            <button type="button" id="btn-randomize-coords" class="btn-tactical btn-inspect-sm" style="font-size:10px; padding:3px 8px; cursor:pointer;">
+              <i data-lucide="shuffle" style="width:11px; height:11px;"></i> Randomize Location
+            </button>
+          </div>
           <div class="form-row-2">
             <div class="form-field">
               <label>Latitude</label>
-              <input type="number" name="patient_lat" class="tactical-input" value="26.9124" min="26.5" max="27.5" step="0.0001" required />
+              <input type="number" name="patient_lat" class="tactical-input" value="${defaultCoords.lat}" min="26.5" max="27.5" step="0.0001" required />
             </div>
             <div class="form-field">
               <label>Longitude</label>
-              <input type="number" name="patient_lon" class="tactical-input" value="75.7873" min="75.5" max="76.5" step="0.0001" required />
+              <input type="number" name="patient_lon" class="tactical-input" value="${defaultCoords.lon}" min="75.5" max="76.5" step="0.0001" required />
             </div>
           </div>
         </div>
@@ -400,6 +417,15 @@ export function openEmergencyIntakeModal() {
   const form = dialog.querySelector('#form-emergency-intake');
   const errorBox = dialog.querySelector('#intake-error-box');
 
+  const btnRand = dialog.querySelector('#btn-randomize-coords');
+  if (btnRand) {
+    btnRand.addEventListener('click', () => {
+      const c = getRandomJaipurCoords();
+      form.elements['patient_lat'].value = c.lat;
+      form.elements['patient_lon'].value = c.lon;
+    });
+  }
+
   // Setup presets
   dialog.querySelectorAll('.btn-preset').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -412,6 +438,9 @@ export function openEmergencyIntakeModal() {
         if (!input) continue;
         if (input.type === 'checkbox') {
           input.checked = val === 1;
+        } else if (key === 'patient_lat' || key === 'patient_lon') {
+          const jitter = (Math.random() - 0.5) * 0.03;
+          input.value = Number((val + jitter).toFixed(4));
         } else {
           input.value = val;
         }
@@ -486,6 +515,19 @@ export function openEmergencyIntakeModal() {
         result.patient.predicted_severity === 'Critical' ? 'danger' : 'success',
         6000
       );
+
+      // Auto-start real-time simulation at 1x if not running so ambulances start moving immediately
+      if (!store.state.isRealtimeRunning) {
+        try {
+          const speedSelector = document.getElementById('speed-selector');
+          const mult = speedSelector ? (parseFloat(speedSelector.value) || 1.0) : 1.0;
+          await api.startRealtime(1.0, mult / 60.0);
+          const status = await api.getRealtimeStatus();
+          store.updateRealtimeStatus(status);
+        } catch (autoErr) {
+          console.debug('Realtime auto-start:', autoErr);
+        }
+      }
 
       close();
 

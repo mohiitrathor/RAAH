@@ -29,6 +29,32 @@ export function setupIncidents() {
     const incidentId = parseInt(inputId.value, 10);
     if (!incidentId || isNaN(incidentId)) return;
 
+    // If this incident is already active, focus and select it instead of erroring
+    const active = store.state.activeIncidents.find(i => i.incident_id === incidentId);
+    if (active) {
+      inputId.value = '';
+      store.selectIncident(incidentId);
+      tacticalMap.focusIncident(incidentId);
+      openIncidentDetail(incidentId);
+      const ambId = active.ambulance_id || (active.ambulance ? active.ambulance.ambulance_id : 'Unit');
+      showToast(
+        'Incident Already Active',
+        `Incident #${incidentId} is already dispatched (${ambId} en route). Focused on tactical map.`,
+        'info'
+      );
+      return;
+    }
+
+    // Dataset range validation
+    if (incidentId > 100000) {
+      showToast(
+        'Dataset Range: 1 - 100,000',
+        `Historical dataset incidents range from 1 to 100,000. To triage a new live emergency, click "+ Live Call".`,
+        'warning'
+      );
+      return;
+    }
+
     try {
       const result = await api.dispatchIncident(incidentId);
       inputId.value = '';
@@ -49,6 +75,19 @@ export function setupIncidents() {
         'success'
       );
 
+      // Auto-start real-time simulation at 1x if not running so ambulances start moving immediately
+      if (!store.state.isRealtimeRunning) {
+        try {
+          const speedSelector = document.getElementById('speed-selector');
+          const mult = speedSelector ? (parseFloat(speedSelector.value) || 1.0) : 1.0;
+          await api.startRealtime(1.0, mult / 60.0);
+          const status = await api.getRealtimeStatus();
+          store.updateRealtimeStatus(status);
+        } catch (autoErr) {
+          console.debug('Realtime auto-start:', autoErr);
+        }
+      }
+
       // Open detail drawer and focus map
       store.selectIncident(result.incident_id);
       tacticalMap.focusIncident(result.incident_id);
@@ -57,6 +96,16 @@ export function setupIncidents() {
       showToast('Dispatch Error', err.message, 'danger');
     }
   });
+
+  function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   // --- Reactive Render of Incident Cards ---
   store.subscribe((state, changedKeys) => {
@@ -78,15 +127,52 @@ export function setupIncidents() {
       return;
     }
 
-function escapeHtml(value) {
-  if (value === null || value === undefined) return '';
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+    // Check if cards already exist in DOM for exact same incidents
+    const existingCards = Array.from(container.querySelectorAll('.incident-card'));
+    const existingIds = existingCards.map(c => parseInt(c.getAttribute('data-id'), 10));
+    const currentIds = incidents.map(i => i.incident_id);
+
+    const idsMatch = existingIds.length === currentIds.length &&
+      existingIds.every((id, idx) => id === currentIds[idx]);
+
+    if (idsMatch) {
+      // In-place updates for each card without rebuilding DOM or re-binding events
+      incidents.forEach((inc, idx) => {
+        const card = existingCards[idx];
+        if (!card) return;
+
+        const isSelected = state.selectedIncidentId === inc.incident_id;
+        card.classList.toggle('selected', isSelected);
+
+        let statusText = inc.status ? inc.status : 'DISPATCHED';
+        if (statusText === 'DISPATCH_RECOMMENDED') {
+          statusText = 'DISPATCHED';
+        }
+
+        const statusTag = card.querySelector('.incident-status-tag');
+        if (statusTag) {
+          statusTag.textContent = statusText;
+          statusTag.className = `incident-status-tag status-${statusText.toLowerCase()}`;
+        }
+
+        const etaFig = card.querySelector('.eta-figure');
+        if (etaFig) {
+          const etaText = (inc.eta_minutes !== null && inc.eta_minutes !== undefined) ? `${Number(inc.eta_minutes).toFixed(1)} MIN` : '—';
+          etaFig.textContent = `ETA ${etaText}`;
+        }
+
+        const unitEl = card.querySelector('.route-unit');
+        if (unitEl && inc.ambulance_id) {
+          unitEl.textContent = String(inc.ambulance_id);
+        }
+
+        const destEl = card.querySelector('.route-dest');
+        if (destEl && inc.hospital_id) {
+          destEl.textContent = String(inc.hospital_id);
+        }
+      });
+      return;
+    }
 
     container.innerHTML = incidents.map(inc => {
       const pClass = `p${inc.priority}`;
@@ -95,7 +181,10 @@ function escapeHtml(value) {
       const demoStr = (inc.age && inc.gender)
         ? `${inc.condition || 'EMERGENCY'} — ${inc.age}${String(inc.gender)[0].toUpperCase()}`
         : (inc.condition || 'GENERAL EMERGENCY');
-      const statusText = inc.status ? inc.status : 'DISPATCHED';
+      let statusText = inc.status ? inc.status : 'DISPATCHED';
+      if (statusText === 'DISPATCH_RECOMMENDED') {
+        statusText = 'DISPATCHED';
+      }
 
       return `
         <div class="incident-card ${pClass} ${isSelected ? 'selected' : ''}" data-id="${inc.incident_id}">

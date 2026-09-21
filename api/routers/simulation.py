@@ -71,7 +71,7 @@ def simulation_tick(
         data = SimulationOutput.dashboard_snapshot(
             sim.state
         )
-        cur_time = sim.state.current_time
+        cur_time = int(sim.state.current_time)
         fleet_counts = data.get("fleet", {})
         active_inc_count = len(data.get("active_incidents", []))
         moving_ambs = [
@@ -81,9 +81,27 @@ def simulation_tick(
                 "longitude": round(float(a.longitude), 6),
                 "status": str(a.status),
                 "eta_minutes": round(float(a.eta_minutes), 2) if a.eta_minutes is not None else None,
+                "hospital_id": getattr(a, "hospital_id", None),
+                "route_waypoints": [list(wp) for wp in (getattr(a, "route_waypoints", None) or [])],
             }
             for a in sim.state.ambulances.values()
-            if a.status == "EN_ROUTE" or getattr(a, "is_repositioning", False)
+            if a.status in ("EN_ROUTE", "ARRIVED") or getattr(a, "is_repositioning", False)
+        ]
+        active_incidents_data = [
+            {
+                "incident_id": int(inc.incident_id),
+                "priority": int(inc.priority),
+                "severity": str(inc.severity),
+                "status": str(inc.status),
+                "ambulance_id": inc.ambulance_id,
+                "hospital_id": inc.hospital_id,
+                "eta_minutes": (
+                    round(float(sim.state.ambulances[inc.ambulance_id].eta_minutes), 2)
+                    if (inc.ambulance_id in sim.state.ambulances and sim.state.ambulances[inc.ambulance_id].eta_minutes is not None)
+                    else None
+                ),
+            }
+            for inc in sim.state.get_active_incidents()
         ]
         tick_payload = {
             "current_time": cur_time,
@@ -92,6 +110,7 @@ def simulation_tick(
             "ticks_processed": 1,
             "fleet": fleet_counts,
             "active_incidents_count": active_inc_count,
+            "active_incidents": active_incidents_data,
             "moving_ambulances": moving_ambs,
         }
 

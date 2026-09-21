@@ -94,10 +94,12 @@
           <i data-lucide="step-forward"></i> +1m
         </button>
         <select id="speed-selector" class="speed-select" title="Simulation Speed">
-          <option value="1.0">Speed: 1.0s/m (60x)</option>
-          <option value="0.5">Speed: 0.5s/m (120x)</option>
-          <option value="2.0">Speed: 2.0s/m (30x)</option>
-          <option value="5.0">Speed: 5.0s/m (12x)</option>
+          <option value="1" selected>Speed: Real-Time 1x (1s/s)</option>
+          <option value="2">Speed: 2x Fast</option>
+          <option value="5">Speed: 5x Fast</option>
+          <option value="10">Speed: 10x Fast</option>
+          <option value="30">Speed: 30x Fast</option>
+          <option value="60">Speed: 60x Fast</option>
         </select>
         <button id="btn-reset" class="btn-tactical btn-reset" title="Reset Simulation">
           <i data-lucide="rotate-ccw"></i> Reset
@@ -128,15 +130,14 @@
         <div class="panel-body">
           <!-- Quick Dispatch Box -->
           <div class="quick-dispatch-box">
-            <div class="stat-header">Dispatch New Incident</div>
+            <div class="stat-header">Replay Dataset Incident</div>
             <form id="form-quick-dispatch" class="input-row">
               <input 
                 type="number" 
                 id="input-incident-id" 
                 class="dispatch-input" 
-                placeholder="Incident ID (1-100000)" 
+                placeholder="Dataset ID (1-100000)" 
                 min="1" 
-                max="100000" 
                 required
               >
               <button type="submit" class="btn-dispatch">

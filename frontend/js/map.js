@@ -409,10 +409,12 @@ class TacticalMap {
         }
       }
 
-      if (!incident.ambulance_id || !incident.hospital_id) continue;
+      const ambId = incident.ambulance_id || (incident.ambulance ? incident.ambulance.ambulance_id : null);
+      const hospId = incident.hospital_id || (incident.hospital ? incident.hospital.hospital_id : null);
+      if (!ambId || !hospId) continue;
 
-      const ambulance = state.ambulances.get(String(incident.ambulance_id));
-      const hospital = state.hospitals.get(String(incident.hospital_id));
+      const ambulance = state.ambulances.get(String(ambId));
+      const hospital = state.hospitals.get(String(hospId));
 
       if (!ambulance || !hospital) continue;
 
@@ -593,6 +595,78 @@ class TacticalMap {
                 opacity: 0.85,
               });
               this.routeLines.set(repoKey, routeLine);
+              this.routePolylinesLayer.addLayer(routeLine);
+            }
+          }
+        } else if (ambulance.status === 'EN_ROUTE' && !activeAmbulanceIds.has(ambIdStr) && ambulance.hospital_id) {
+          const hospital = state.hospitals.get(String(ambulance.hospital_id));
+          if (hospital) {
+            activeAmbulanceIds.add(ambIdStr);
+            const routeKey = `amb_${ambIdStr}`;
+            activeRouteIds.add(routeKey);
+            const etaText = ambulance.eta_minutes !== null && ambulance.eta_minutes !== undefined ? `${Number(ambulance.eta_minutes).toFixed(1)} min` : 'Calculating';
+            const unitColor = '#f59e0b';
+            const ambPopupHtml = `
+              <div style="font-family: var(--font-sans); min-width: 170px;">
+                <div style="font-weight: 800; font-size: 13px; color: ${unitColor};">
+                  ${ambulance.ambulance_id} (${ambulance.ambulance_type || 'ALS'})
+                </div>
+                <div style="font-size: 11px; margin-top: 4px; font-family: var(--font-mono); color: #cbd5e1;">
+                  <div>Status: <strong>${ambulance.status}</strong></div>
+                  <div>Destination: <strong>${hospital.hospital_id}</strong></div>
+                  <div>ETA: <strong style="color: #f59e0b;">${etaText}</strong></div>
+                </div>
+              </div>
+            `;
+            const existingAmbMarker = this.activeAmbulanceMarkers.get(ambIdStr);
+            if (existingAmbMarker) {
+              existingAmbMarker.setLatLng([ambulance.latitude, ambulance.longitude]);
+              if (existingAmbMarker.getPopup()) existingAmbMarker.setPopupContent(ambPopupHtml);
+              if (existingAmbMarker.getTooltip()) existingAmbMarker.setTooltipContent(`${ambulance.ambulance_id} | ${etaText}`);
+            } else {
+              const icon = L.divIcon({
+                className: 'custom-amb-icon',
+                html: `
+                  <div class="ambulance-marker-pin" style="background: ${unitColor};">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v9"/>
+                      <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+                    </svg>
+                  </div>
+                `,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13],
+              });
+              const ambMarker = L.marker([ambulance.latitude, ambulance.longitude], { icon });
+              ambMarker.bindPopup(ambPopupHtml);
+              ambMarker.bindTooltip(`${ambulance.ambulance_id} | ${etaText}`, {
+                permanent: true,
+                direction: 'top',
+                offset: [0, -14],
+                className: 'amb-tooltip',
+              });
+              this.activeAmbulanceMarkers.set(ambIdStr, ambMarker);
+              this.enRouteAmbulancesLayer.addLayer(ambMarker);
+            }
+
+            const routePoints = (ambulance.route_waypoints && ambulance.route_waypoints.length > 1)
+              ? ambulance.route_waypoints
+              : [
+                  [ambulance.latitude, ambulance.longitude],
+                  [hospital.latitude, hospital.longitude],
+                ];
+            const existingRoute = this.routeLines.get(routeKey);
+            if (existingRoute) {
+              existingRoute.setLatLngs(routePoints);
+              existingRoute.setStyle({ color: unitColor });
+            } else {
+              const routeLine = L.polyline(routePoints, {
+                color: unitColor,
+                weight: 3,
+                dashArray: '6, 8',
+                opacity: 0.85,
+              });
+              this.routeLines.set(routeKey, routeLine);
               this.routePolylinesLayer.addLayer(routeLine);
             }
           }

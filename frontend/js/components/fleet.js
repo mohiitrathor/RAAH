@@ -11,7 +11,7 @@ export function setupFleet() {
   const statMaintenance = document.getElementById('stat-maintenance');
 
   store.subscribe((state, changedKeys) => {
-    if (changedKeys.includes('fleet') || changedKeys.includes('dashboard')) {
+    if (changedKeys.includes('fleet')) {
       const fleet = state.fleet;
       statAvailable.textContent = fleet.available ?? 0;
       statEnroute.textContent = fleet.en_route ?? 0;

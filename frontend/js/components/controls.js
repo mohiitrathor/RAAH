@@ -18,16 +18,25 @@ export function setupControls() {
   const statusPill = document.getElementById('sim-status-pill');
   const statusText = document.getElementById('sim-status-text');
 
+  function getSpeedConfig(multiplierVal) {
+    const mult = parseFloat(multiplierVal) || 1.0;
+    return {
+      tickInterval: 1.0,
+      minutesPerTick: mult / 60.0,
+    };
+  }
+
   // --- Actions ---
 
   btnPlay.addEventListener('click', async () => {
     try {
       btnPlay.disabled = true;
-      const speed = parseFloat(speedSelector.value) || 1.0;
-      await api.startRealtime(speed, 1);
+      const { tickInterval, minutesPerTick } = getSpeedConfig(speedSelector.value);
+      await api.startRealtime(tickInterval, minutesPerTick);
       const status = await api.getRealtimeStatus();
       store.updateRealtimeStatus(status);
-      showToast('Simulation Started', `Running at 1 tick per ${speed}s (1 min/tick)`, 'success', 3000);
+      const speedLabel = speedSelector.options[speedSelector.selectedIndex]?.text || 'Real-Time (1x)';
+      showToast('Simulation Started', `Running at ${speedLabel}`, 'success', 3000);
     } catch (err) {
       showToast('Simulation Error', err.message, 'danger');
     } finally {
@@ -41,7 +50,7 @@ export function setupControls() {
       await api.stopRealtime();
       const status = await api.getRealtimeStatus();
       store.updateRealtimeStatus(status);
-      showToast('Simulation Paused', `Clock halted at T+${store.state.simTime}m`, 'info', 3000);
+      showToast('Simulation Paused', `Clock halted at T+${Number(store.state.simTime || 0).toFixed(1)}m`, 'info', 3000);
     } catch (err) {
       showToast('Pause Error', err.message, 'danger');
     } finally {
@@ -90,9 +99,9 @@ export function setupControls() {
 
   speedSelector.addEventListener('change', async () => {
     if (store.state.isRealtimeRunning) {
-      const speed = parseFloat(speedSelector.value) || 1.0;
+      const { tickInterval, minutesPerTick } = getSpeedConfig(speedSelector.value);
       await api.stopRealtime();
-      await api.startRealtime(speed, 1);
+      await api.startRealtime(tickInterval, minutesPerTick);
       const status = await api.getRealtimeStatus();
       store.updateRealtimeStatus(status);
     }
@@ -100,8 +109,11 @@ export function setupControls() {
 
   // --- Reactive Render ---
   store.subscribe((state, changedKeys) => {
-    // Clock
-    simClock.textContent = `T+${state.simTime} min`;
+    // Clock format T+Xm YYs
+    const totalMins = Number(state.simTime) || 0;
+    const mins = Math.floor(totalMins);
+    const secs = Math.floor(((totalMins - mins) * 60) + 0.0001);
+    simClock.textContent = `T+${mins}m ${secs.toString().padStart(2, '0')}s`;
 
     // Controls state
     const isRunning = state.isRealtimeRunning;

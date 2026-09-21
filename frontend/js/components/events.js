@@ -22,7 +22,7 @@ export function setupEvents() {
 
   // --- Render Activity & Event Feed ---
   store.subscribe((state, changedKeys) => {
-    if (!changedKeys.includes('activityFeed') && !changedKeys.includes('events') && !changedKeys.includes('dashboard')) {
+    if (!changedKeys.includes('activityFeed') && !changedKeys.includes('events')) {
       return;
     }
 

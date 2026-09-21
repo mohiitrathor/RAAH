@@ -583,11 +583,11 @@ class Simulator:
                     traffic_level=str(getattr(ambulance, "traffic_level", "NORMAL")),
                     road_condition=str(getattr(ambulance, "road_condition", "GOOD")),
                 )
-                if ambulance.eta_minutes is not None and ambulance.eta_minutes > 1.0:
-                    route.total_duration_minutes = float(ambulance.eta_minutes)
-                else:
-                    ambulance.eta_minutes = route.initial_eta_minutes
-                    ambulance.base_eta_minutes = route.initial_eta_minutes
+                initial_eta = float(ambulance.eta_minutes) if (ambulance.eta_minutes is not None and ambulance.eta_minutes > 0) else float(route.initial_eta_minutes)
+                route.total_duration_minutes = max(0.1, initial_eta)
+                route.elapsed_minutes = 0.0
+                ambulance.eta_minutes = initial_eta
+                ambulance.base_eta_minutes = initial_eta
 
                 self.active_routes[ambulance.ambulance_id] = route
                 ambulance.route_distance_km = route.route_distance_km
@@ -900,6 +900,8 @@ class Simulator:
                 traffic_level=str(getattr(selected_amb, "traffic_level", "NORMAL")),
                 road_condition=str(getattr(selected_amb, "road_condition", "GOOD")),
             )
+            route.total_duration_minutes = max(0.1, float(selected_eta))
+            route.elapsed_minutes = 0.0
             self.active_routes[selected_amb.ambulance_id] = route
             selected_amb.route_waypoints = [list(wp) for wp in route.waypoints]
             selected_amb.routing_engine = route.routing_engine
@@ -1849,32 +1851,40 @@ class Simulator:
         }
 
     # ==========================================================
-    # ADVANCE TIME
-    # ==============================================================
+    # ADVANCE AMBULANCES (KINEMATICS & TRANSIT)
+    # ==========================================================
 
-    def advance_time(
+    def advance_ambulances(
         self,
-        minutes=1,
+        delta_minutes: float = 1.0 / 60.0,
     ):
+        """
+        Advance vehicle positions along road waypoints and decrement ETAs.
+        Runs every 1-second tick at high temporal resolution.
+        """
+        delta_minutes = max(0.0, float(delta_minutes))
+        if delta_minutes <= 0.0:
+            return
 
-        minutes = max(
-            0,
-            int(minutes),
-        )
-
-        self.state.advance_time(
-            minutes
-        )
-
-        for ambulance in (
-            self.state.ambulances.values()
-        ):
+        for ambulance in list(self.state.ambulances.values()):
 
             if ambulance.status == "REPOSITIONING":
                 # M9 Kinematics: Advance repositioning ambulance along route waypoints
                 route = self.active_routes.get(ambulance.ambulance_id)
+                if route is None and getattr(ambulance, "reposition_target", None):
+                    target = ambulance.reposition_target
+                    route = self.routing_engine.generate_route(
+                        origin=(float(ambulance.latitude), float(ambulance.longitude)),
+                        destination=(float(target[0]), float(target[1])),
+                        vehicle_type=str(ambulance.ambulance_type),
+                    )
+                    route.total_duration_minutes = max(0.1, float(ambulance.eta_minutes or route.initial_eta_minutes))
+                    route.elapsed_minutes = 0.0
+                    self.active_routes[ambulance.ambulance_id] = route
+                    ambulance.route_waypoints = [list(wp) for wp in route.waypoints]
+
                 if route is not None:
-                    route.elapsed_minutes += minutes
+                    route.elapsed_minutes += delta_minutes
                     new_lat, new_lon = self.routing_engine.interpolate_position(
                         route,
                         route.elapsed_minutes,
@@ -1889,11 +1899,11 @@ class Simulator:
                         ambulance.route_waypoints = [[new_lat, new_lon]] + [list(wp) for wp in route.waypoints[idx + 1:]]
 
                 ambulance.eta_minutes = max(
-                    0,
-                    (ambulance.eta_minutes or 0) - minutes,
+                    0.0,
+                    float(ambulance.eta_minutes or 0.0) - float(delta_minutes),
                 )
 
-                if ambulance.eta_minutes <= 0 or (route and route.elapsed_minutes >= route.total_duration_minutes):
+                if ambulance.eta_minutes <= 1e-4 or (route and route.elapsed_minutes >= (route.total_duration_minutes - 1e-4)):
                     ambulance.eta_minutes = None
                     ambulance.base_eta_minutes = None
                     ambulance.status = "AVAILABLE"
@@ -1926,8 +1936,23 @@ class Simulator:
 
             # M8 Kinematics: Advance vehicle position along active route waypoints
             route = self.active_routes.get(ambulance.ambulance_id)
+            if route is None and ambulance.hospital_id:
+                target_hosp = self.state.hospitals.get(ambulance.hospital_id)
+                if target_hosp:
+                    route = self.routing_engine.generate_route(
+                        origin=(float(ambulance.latitude), float(ambulance.longitude)),
+                        destination=(float(target_hosp.latitude), float(target_hosp.longitude)),
+                        vehicle_type=str(ambulance.ambulance_type),
+                        traffic_level=str(getattr(ambulance, "traffic_level", "NORMAL")),
+                        road_condition=str(getattr(ambulance, "road_condition", "GOOD")),
+                    )
+                    route.total_duration_minutes = max(0.1, float(ambulance.eta_minutes or route.initial_eta_minutes))
+                    route.elapsed_minutes = 0.0
+                    self.active_routes[ambulance.ambulance_id] = route
+                    ambulance.route_waypoints = [list(wp) for wp in route.waypoints]
+
             if route is not None:
-                route.elapsed_minutes += minutes
+                route.elapsed_minutes += delta_minutes
                 new_lat, new_lon = self.routing_engine.interpolate_position(
                     route,
                     route.elapsed_minutes,
@@ -1943,13 +1968,13 @@ class Simulator:
                     ambulance.route_waypoints = [[new_lat, new_lon]] + [list(wp) for wp in route.waypoints[idx + 1:]]
 
             ambulance.eta_minutes = max(
-                0,
-                ambulance.eta_minutes - minutes,
+                0.0,
+                float(ambulance.eta_minutes or 0.0) - float(delta_minutes),
             )
 
-            if ambulance.eta_minutes <= 0:
+            if ambulance.eta_minutes <= 1e-4 or (route and route.elapsed_minutes >= (route.total_duration_minutes - 1e-4)):
 
-                ambulance.eta_minutes = 0
+                ambulance.eta_minutes = 0.0
 
                 ambulance.status = "ARRIVED"
 
@@ -2008,6 +2033,23 @@ class Simulator:
                     ambulance.incident_id
                 ] = ambulance.eta_minutes
 
+    # ==========================================================
+    # ADVANCE SIMULATION CLOCK (MINUTES & COORDINATION)
+    # ==========================================================
+
+    def advance_simulation_clock(
+        self,
+        minutes: int = 1,
+    ):
+        """
+        Advance the discrete integer simulation clock and run periodic background tasks.
+        """
+        minutes = max(0, int(minutes))
+        if minutes <= 0:
+            return
+
+        self.state.advance_time(minutes)
+
         # Periodic coordination maintenance (every 5 simulation minutes)
         if self.sim_time - self._last_coordination_time >= 5:
             self._last_coordination_time = self.sim_time
@@ -2030,6 +2072,25 @@ class Simulator:
                     self.state.add_event(
                         f"MCI {mci.mci_id} ({mci.name}) EVACUATION COMPLETE — RESOLVED."
                     )
+
+    # ==========================================================
+    # ADVANCE TIME (COMPOSITE STEP)
+    # ==========================================================
+
+    def advance_time(
+        self,
+        minutes=1,
+    ):
+        """
+        Advance simulation by whole minutes (advancing both ambulances and simulation clock).
+        """
+        minutes = max(
+            0,
+            int(minutes),
+        )
+
+        self.advance_ambulances(float(minutes))
+        self.advance_simulation_clock(minutes)
 
     # ==========================================================
     # ETA RECHECK

@@ -92,27 +92,47 @@ class Store {
         existing.status = moving.status;
         if (moving.eta_minutes !== undefined) existing.eta_minutes = moving.eta_minutes;
         if (moving.route_waypoints) existing.route_waypoints = moving.route_waypoints;
+        if (moving.hospital_id) existing.hospital_id = moving.hospital_id;
       } else {
         this.state.ambulances.set(aid, { ...moving });
       }
+
+      // Sync ETA and arrival status to assigned active incidents
+      for (const inc of this.state.activeIncidents) {
+        if (String(inc.ambulance_id) === aid) {
+          if (moving.eta_minutes !== undefined && moving.eta_minutes !== null) {
+            inc.eta_minutes = moving.eta_minutes;
+          }
+          if (moving.status === 'ARRIVED') {
+            inc.status = 'ARRIVED';
+          }
+        }
+      }
     }
-    this.notify(['ambulances']);
+    this.notify(['ambulances', 'activeIncidents']);
   }
 
   updateFromDashboard(dashboardData) {
     if (!dashboardData) return;
+    const changed = ['simTime'];
     this.state.simTime = dashboardData.time !== undefined ? dashboardData.time : this.state.simTime;
     if (dashboardData.active_incidents) {
-      this.state.activeIncidents = dashboardData.active_incidents;
+      const merged = dashboardData.active_incidents.map(newInc => {
+        const existing = this.state.activeIncidents.find(i => i.incident_id === newInc.incident_id);
+        return existing ? { ...existing, ...newInc } : newInc;
+      });
+      this.state.activeIncidents = merged;
+      changed.push('activeIncidents');
     }
     if (dashboardData.fleet) {
       this.state.fleet = dashboardData.fleet;
+      changed.push('fleet');
     }
-    if (dashboardData.events) {
+    if (dashboardData.events && Array.isArray(dashboardData.events) && dashboardData.events.length > 0) {
       this.state.events = dashboardData.events;
+      changed.push('events');
     }
 
-    const changed = ['dashboard', 'simTime', 'activeIncidents', 'fleet', 'events'];
     this.notify(changed);
   }
 

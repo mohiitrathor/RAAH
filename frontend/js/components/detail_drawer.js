@@ -25,11 +25,23 @@ export function setupDetailDrawer() {
 
   // Subscribe to store updates to keep drawer data fresh in real-time
   store.subscribe((state, changedKeys) => {
-    if (!currentIncidentId || !drawerElement.classList.contains('open')) return;
+    if (!currentIncidentId || !drawerElement || !drawerElement.classList.contains('open')) return;
+
+    // Full re-render when decision evidence changes (e.g. reroute executed)
+    if (changedKeys.includes('decisions')) {
+      const incident = state.activeIncidents.find(i => i.incident_id === currentIncidentId);
+      if (incident) renderDrawerContent(incident);
+      return;
+    }
 
     if (changedKeys.includes('activeIncidents') || changedKeys.includes('ambulances') || changedKeys.includes('hospitals')) {
       const incident = state.activeIncidents.find(i => i.incident_id === currentIncidentId);
-      if (incident) {
+      if (!incident) return;
+
+      // If drawer is already open for this incident, perform targeted in-place DOM updates (no flicker!)
+      if (drawerElement.dataset.renderedIncidentId === String(incident.incident_id)) {
+        updateDrawerTelemetry(incident);
+      } else {
         renderDrawerContent(incident);
       }
     }
@@ -64,6 +76,7 @@ export async function openIncidentDetail(incidentId) {
 export function closeIncidentDetail() {
   if (drawerElement) {
     drawerElement.classList.remove('open');
+    drawerElement.dataset.renderedIncidentId = '';
   }
   currentIncidentId = null;
 }
@@ -107,7 +120,7 @@ async function renderDrawerContent(incident) {
       <div class="drawer-title-group">
         <span class="incident-id-badge">#${incident.incident_id}</span>
         <span class="priority-pill ${pClass}">P${incident.priority} ${incident.severity}</span>
-        <span class="status-pill status-${(incident.status || 'dispatched').toLowerCase()}">${incident.status || 'DISPATCHED'}</span>
+        <span id="drawer-header-status-pill" class="status-pill status-${(incident.status || 'dispatched').toLowerCase()}">${incident.status || 'DISPATCHED'}</span>
       </div>
       <button class="drawer-close-btn" title="Close Drawer">&times;</button>
     </div>
@@ -134,7 +147,7 @@ async function renderDrawerContent(incident) {
           </div>
           <div class="detail-cell">
             <span class="label">Lifecycle Status</span>
-            <span class="value">${incident.status}</span>
+            <span id="drawer-cell-lifecycle" class="value">${incident.status || 'DISPATCHED'}</span>
           </div>
         </div>
       </div>
@@ -157,19 +170,19 @@ async function renderDrawerContent(incident) {
             </div>
             <div class="detail-cell">
               <span class="label">Operational Status</span>
-              <span class="value status-text-${ambulance.status.toLowerCase()}">${ambulance.status}</span>
+              <span id="drawer-amb-status" class="value status-text-${(ambulance.status || '').toLowerCase()}">${ambulance.status}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Remaining Route ETA</span>
-              <span class="value font-mono highlight text-accent">${etaDisplay}</span>
+              <span id="drawer-amb-eta" class="value font-mono highlight text-accent">${etaDisplay}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Route Distance</span>
-              <span class="value font-mono">${ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—'}</span>
+              <span id="drawer-amb-distance" class="value font-mono">${ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—'}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Traffic / Road</span>
-              <span class="value font-mono">${ambulance.traffic_level || 'NORMAL'} / ${ambulance.road_condition || 'GOOD'}</span>
+              <span id="drawer-amb-traffic" class="value font-mono">${ambulance.traffic_level || 'NORMAL'} / ${ambulance.road_condition || 'GOOD'}</span>
             </div>
           </div>
         ` : `
@@ -187,7 +200,7 @@ async function renderDrawerContent(incident) {
           <div class="detail-grid">
             <div class="detail-cell">
               <span class="label">Facility ID</span>
-              <span class="value font-mono highlight">${hospital.hospital_id}</span>
+              <span id="drawer-hosp-id" class="value font-mono highlight">${hospital.hospital_id}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Classification</span>
@@ -195,23 +208,21 @@ async function renderDrawerContent(incident) {
             </div>
             <div class="detail-cell">
               <span class="label">Available General Beds</span>
-              <span class="value font-mono ${hospital.is_full ? 'text-danger' : 'text-success'}">
+              <span id="drawer-hosp-beds" class="value font-mono ${hospital.is_full ? 'text-danger' : 'text-success'}">
                 ${hospital.available_beds} / ${hospital.capacity}
               </span>
             </div>
             <div class="detail-cell">
               <span class="label">Available ICU Beds</span>
-              <span class="value font-mono ${hospital.available_icu <= 0 ? 'text-danger' : 'text-success'}">
+              <span id="drawer-hosp-icu" class="value font-mono ${hospital.available_icu <= 0 ? 'text-danger' : 'text-success'}">
                 ${hospital.available_icu} / ${hospital.icu_capacity}
               </span>
             </div>
           </div>
-          ${hospital.is_full ? `
-            <div class="alert-banner danger" style="margin-top: 8px;">
-              <i data-lucide="alert-octagon"></i>
-              <span>CRITICAL: Hospital reached 100% saturation! Redirection recommended.</span>
-            </div>
-          ` : ''}
+          <div id="drawer-hosp-alert" class="alert-banner danger" style="margin-top: 8px; ${hospital.is_full ? '' : 'display: none;'}">
+            <i data-lucide="alert-octagon"></i>
+            <span>CRITICAL: Hospital reached 100% saturation! Redirection recommended.</span>
+          </div>
         ` : `
           <div class="empty-placeholder">No destination hospital assigned.</div>
         `}
@@ -427,4 +438,95 @@ async function renderDrawerContent(incident) {
       btnExec.disabled = false;
     }
   });
+
+  // Mark drawer as rendered with current incident ID
+  drawerElement.dataset.renderedIncidentId = String(incident.incident_id);
+}
+
+function updateDrawerTelemetry(incident) {
+  if (!drawerElement || !incident) return;
+
+  const ambulance = store.state.ambulances.get(String(incident.ambulance_id));
+  const hospital = store.state.hospitals.get(String(incident.hospital_id));
+
+  // Header status
+  const headerStatus = drawerElement.querySelector('#drawer-header-status-pill');
+  if (headerStatus) {
+    const st = incident.status || 'DISPATCHED';
+    headerStatus.textContent = st;
+    headerStatus.className = `status-pill status-${st.toLowerCase()}`;
+  }
+
+  // Lifecycle status
+  const lifecycleCell = drawerElement.querySelector('#drawer-cell-lifecycle');
+  if (lifecycleCell) {
+    lifecycleCell.textContent = incident.status || 'DISPATCHED';
+  }
+
+  // Ambulance telemetry
+  if (ambulance) {
+    const ambStatus = drawerElement.querySelector('#drawer-amb-status');
+    if (ambStatus) {
+      ambStatus.textContent = ambulance.status;
+      ambStatus.className = `value status-text-${(ambulance.status || '').toLowerCase()}`;
+    }
+
+    const ambEta = drawerElement.querySelector('#drawer-amb-eta');
+    if (ambEta) {
+      const eta = (incident.eta_minutes !== null && incident.eta_minutes !== undefined)
+        ? incident.eta_minutes
+        : ambulance.eta_minutes;
+      ambEta.textContent = (eta !== null && eta !== undefined) ? `${Number(eta).toFixed(1)} min` : '—';
+    }
+
+    const ambDist = drawerElement.querySelector('#drawer-amb-distance');
+    if (ambDist) {
+      ambDist.textContent = ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—';
+    }
+
+    const ambTraffic = drawerElement.querySelector('#drawer-amb-traffic');
+    if (ambTraffic) {
+      ambTraffic.textContent = `${ambulance.traffic_level || 'NORMAL'} / ${ambulance.road_condition || 'GOOD'}`;
+    }
+  }
+
+  // Hospital telemetry
+  if (hospital) {
+    const hospBeds = drawerElement.querySelector('#drawer-hosp-beds');
+    if (hospBeds) {
+      hospBeds.textContent = `${hospital.available_beds} / ${hospital.capacity}`;
+      hospBeds.className = `value font-mono ${hospital.is_full ? 'text-danger' : 'text-success'}`;
+    }
+
+    const hospIcu = drawerElement.querySelector('#drawer-hosp-icu');
+    if (hospIcu) {
+      hospIcu.textContent = `${hospital.available_icu} / ${hospital.icu_capacity}`;
+      hospIcu.className = `value font-mono ${hospital.available_icu <= 0 ? 'text-danger' : 'text-success'}`;
+    }
+
+    const hospAlert = drawerElement.querySelector('#drawer-hosp-alert');
+    if (hospAlert) {
+      if (hospital.is_full) {
+        hospAlert.style.display = 'flex';
+      } else {
+        hospAlert.style.display = 'none';
+      }
+    }
+  }
+
+  // Operator action button state
+  const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE';
+  const selectHosp = drawerElement.querySelector('#select-reroute-hospital');
+  const btnEval = drawerElement.querySelector('#btn-eval-reroute');
+  const btnExec = drawerElement.querySelector('#btn-exec-reroute');
+
+  if (selectHosp && selectHosp.disabled !== !isEnRoute) {
+    selectHosp.disabled = !isEnRoute;
+  }
+  if (btnEval && btnEval.disabled !== !isEnRoute) {
+    btnEval.disabled = !isEnRoute;
+  }
+  if (btnExec && btnExec.disabled !== !isEnRoute) {
+    btnExec.disabled = !isEnRoute;
+  }
 }

@@ -252,8 +252,8 @@ class Settings(BaseSettings):
         default=1.0,
         description="Wall-clock sleep duration between background simulation ticks",
     )
-    simulation_minutes_per_tick: int = Field(
-        default=1,
+    simulation_minutes_per_tick: float = Field(
+        default=1.0 / 60.0,
         description="Simulation minutes advanced per tick",
     )
     consecutive_error_threshold: int = Field(

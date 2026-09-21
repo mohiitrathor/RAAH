@@ -69,12 +69,13 @@ class SimulatorManager:
         self._stop_event = threading.Event()
         self._status = "STOPPED"
         self._tick_interval_seconds: float = 1.0
-        self._minutes_per_tick: int = 1
+        self._minutes_per_tick: float = 1.0 / 60.0
         self._ticks_processed: int = 0
         self._started_at: str | None = None
         self._last_error: str | None = None
         self._consecutive_errors: int = 0
         self._is_shutting_down: bool = False
+        self._sim_time_accumulator: float = 0.0
 
     # ----------------------------------------------------------
     # INITIALIZE
@@ -393,7 +394,7 @@ class SimulatorManager:
     def start_realtime(
         self,
         tick_interval_seconds: float = 1.0,
-        minutes_per_tick: int = 1,
+        minutes_per_tick: float = 1.0 / 60.0,
     ) -> dict:
         """
         Start the background real-time simulation thread.
@@ -417,7 +418,8 @@ class SimulatorManager:
                 self._thread.join(timeout=3.0)
 
             self._tick_interval_seconds = float(tick_interval_seconds)
-            self._minutes_per_tick = int(minutes_per_tick)
+            self._minutes_per_tick = float(minutes_per_tick)
+            self._sim_time_accumulator = 0.0
             self._ticks_processed = 0
             self._consecutive_errors = 0
             self._last_error = None
@@ -520,9 +522,9 @@ class SimulatorManager:
             return {
                 "status": self._status,
                 "is_running": is_running,
-                "current_time": current_time,
+                "current_time": int(current_time),
                 "tick_interval_seconds": self._tick_interval_seconds,
-                "minutes_per_tick": self._minutes_per_tick,
+                "minutes_per_tick": round(float(self._minutes_per_tick), 4),
                 "speed_multiplier": speed_multiplier,
                 "ticks_processed": self._ticks_processed,
                 "started_at": self._started_at,
@@ -548,15 +550,39 @@ class SimulatorManager:
 
             try:
                 with self._lock:
-                    self._simulator.advance_time(self._minutes_per_tick)
+                    delta_mins = float(self._minutes_per_tick)
+                    self._simulator.advance_ambulances(delta_mins)
+
+                    self._sim_time_accumulator += delta_mins
+                    if self._sim_time_accumulator >= 1.0:
+                        mins_to_advance = int(self._sim_time_accumulator)
+                        self._sim_time_accumulator -= mins_to_advance
+                        self._simulator.advance_simulation_clock(mins_to_advance)
+
                     self._simulator.process_events()
                     self._simulator.check_redirections()
 
                     # Extract lightweight projection under lock (M13 Phase 1)
                     sim_state = self._simulator.state
-                    cur_time = sim_state.current_time
+                    cur_time = int(sim_state.current_time)
                     fleet_counts = SimulationOutput.fleet_summary(sim_state.ambulances.values())
-                    active_inc_count = len(sim_state.get_active_incidents())
+                    active_incidents_data = [
+                        {
+                            "incident_id": int(inc.incident_id),
+                            "priority": int(inc.priority),
+                            "severity": str(inc.severity),
+                            "status": str(inc.status),
+                            "ambulance_id": inc.ambulance_id,
+                            "hospital_id": inc.hospital_id,
+                            "eta_minutes": (
+                                round(float(sim_state.ambulances[inc.ambulance_id].eta_minutes), 2)
+                                if (inc.ambulance_id in sim_state.ambulances and sim_state.ambulances[inc.ambulance_id].eta_minutes is not None)
+                                else None
+                            ),
+                        }
+                        for inc in sim_state.get_active_incidents()
+                    ]
+                    active_inc_count = len(active_incidents_data)
                     moving_ambs = [
                         {
                             "ambulance_id": str(a.ambulance_id),
@@ -564,9 +590,11 @@ class SimulatorManager:
                             "longitude": round(float(a.longitude), 6),
                             "status": str(a.status),
                             "eta_minutes": round(float(a.eta_minutes), 2) if a.eta_minutes is not None else None,
+                            "hospital_id": getattr(a, "hospital_id", None),
+                            "route_waypoints": [list(wp) for wp in (getattr(a, "route_waypoints", None) or [])],
                         }
                         for a in sim_state.ambulances.values()
-                        if a.status == "EN_ROUTE" or getattr(a, "is_repositioning", False)
+                        if a.status in ("EN_ROUTE", "ARRIVED") or getattr(a, "is_repositioning", False)
                     ]
                     tick_payload = {
                         "current_time": cur_time,
@@ -577,6 +605,7 @@ class SimulatorManager:
                         "ticks_processed": self._ticks_processed + 1,
                         "fleet": fleet_counts,
                         "active_incidents_count": active_inc_count,
+                        "active_incidents": active_incidents_data,
                         "moving_ambulances": moving_ambs,
                     }
 

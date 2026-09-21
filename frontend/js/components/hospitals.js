@@ -21,7 +21,7 @@ export function setupHospitals() {
   setInterval(refreshProjections, 60000);
 
   store.subscribe((state, changedKeys) => {
-    if (!changedKeys.includes('hospitals') && !changedKeys.includes('dashboard')) {
+    if (!changedKeys.includes('hospitals')) {
       return;
     }
 

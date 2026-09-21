@@ -15,10 +15,10 @@ class RealtimeStartRequest(BaseModel):
         le=60.0,
         description="Wall-clock seconds per simulation tick.",
     )
-    minutes_per_tick: int = Field(
-        default=1,
-        ge=1,
-        le=60,
+    minutes_per_tick: float = Field(
+        default=1.0 / 60.0,
+        ge=0.0001,
+        le=60.0,
         description="Simulated minutes advanced per tick.",
     )
 
@@ -34,7 +34,7 @@ class RealtimeStatusResponse(BaseModel):
     is_running: bool
     current_time: int
     tick_interval_seconds: float
-    minutes_per_tick: int
+    minutes_per_tick: float
     speed_multiplier: float
     ticks_processed: int
     started_at: Optional[str] = None
