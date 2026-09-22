@@ -39,6 +39,7 @@ def run_all_tests():
     print("=" * 70)
 
     with TestClient(app) as client:
+        client.post("/simulation/reset")
 
         # ------------------------------------------------------
         # TEST 1: Initial State

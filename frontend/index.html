@@ -80,6 +80,13 @@
             <span id="integrations-status-text">INTEGRATIONS: OK</span>
           </span>
         </div>
+        <div class="ticker-item">
+          <span class="ticker-label">Mode</span>
+          <span id="demo-mode-pill" class="status-pill" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; font-weight: 600;" title="System Operational Mode">
+            <span class="pulse-dot" style="background: #60a5fa;"></span>
+            <span id="demo-mode-text">DEMO / SIMULATION MODE</span>
+          </span>
+        </div>
       </div>
 
       <!-- Simulation Playback Controls -->
@@ -103,6 +110,9 @@
         </select>
         <button id="btn-reset" class="btn-tactical btn-reset" title="Reset Simulation">
           <i data-lucide="rotate-ccw"></i> Reset
+        </button>
+        <button id="btn-demo-surge" class="btn-tactical btn-demo-surge" title="Execute Live End-to-End Demo: Ingest Critical Call, Saturate Facility & Trigger Real-Time Redirection" style="background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; border: 1px solid #fda4af; font-weight: 700; box-shadow: 0 0 10px rgba(225,29,72,0.4); margin-left: 6px; display: inline-flex; align-items: center; gap: 5px;">
+          <i data-lucide="zap" style="width: 14px; height: 14px;"></i> SIMULATE SURGE &amp; DIVERT
         </button>
       </div>
     </header>
@@ -159,6 +169,69 @@
       <!-- CENTER PANEL: SPATIAL TACTICAL MAP -->
       <section id="map-viewport">
         <div id="leaflet-map"></div>
+
+        <!-- Interactive Demo Timeline / Progress Overlay -->
+        <div id="demo-timeline-panel" class="demo-timeline-panel" style="display: none;">
+          <div class="demo-timeline-header">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="pulse-dot" style="background: #e11d48;"></span>
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #fda4af;">Demo Workflow // Surge &amp; Divert</span>
+            </div>
+            <button type="button" id="btn-close-demo-timeline" class="btn-xs" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; padding: 2px 4px;" title="Close Overlay">
+              <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+            </button>
+          </div>
+          <div class="demo-timeline-steps">
+            <div class="demo-step" data-step="1">
+              <span class="step-num">01</span>
+              <span class="step-title">INCIDENT RECEIVED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="2">
+              <span class="step-num">02</span>
+              <span class="step-title">ML TRIAGE</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="3">
+              <span class="step-num">03</span>
+              <span class="step-title">AMBULANCE ASSIGNED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="4">
+              <span class="step-num">04</span>
+              <span class="step-title">HOSPITAL SELECTED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="5">
+              <span class="step-num">05</span>
+              <span class="step-title">CAPACITY DISRUPTION</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="6">
+              <span class="step-num">06</span>
+              <span class="step-title">REDIRECTION EVALUATED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="7">
+              <span class="step-num">07</span>
+              <span class="step-title">ALT HOSPITAL SELECTED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="8">
+              <span class="step-num">08</span>
+              <span class="step-title">ROUTE UPDATED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+            <div class="demo-step" data-step="9">
+              <span class="step-num">09</span>
+              <span class="step-title">DECISION RECORDED</span>
+              <span class="step-badge pending">PENDING</span>
+            </div>
+          </div>
+          <div id="demo-timeline-status-bar" class="demo-timeline-status-bar">
+            Ready to simulate emergency surge and dynamic hospital redirection.
+          </div>
+        </div>
       </section>
 
       <!-- RIGHT PANEL: FLEET & HOSPITAL CAPACITY -->
@@ -760,8 +833,8 @@
       <!-- Header Banner & Mode Indicator -->
       <div class="opt-header-bar">
         <div class="control-bar-left">
-          <span class="opt-mode-tag">OPERATOR COPILOT: ADVISORY MODE</span>
-          <span class="opt-advisory-notice">Autonomous Execution: OFF • Human-in-the-Loop Confirmation Required • 12 Safety Guardrails Active</span>
+          <span class="opt-mode-tag">OPTIMIZATION MODE: OPERATOR COPILOT (ADVISORY)</span>
+          <span class="opt-advisory-notice">Autonomous Execution: OFF • Human-in-the-Loop Confirmation Required • 12 Safety Guardrails Active • READ-ONLY / RECOMMENDATION ONLY</span>
         </div>
         <div class="control-bar-right">
           <span style="font-size: 11px; color: var(--text-secondary); font-weight: 700;">POLICY MODE:</span>

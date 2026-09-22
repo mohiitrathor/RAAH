@@ -24,6 +24,7 @@ import { PIRController } from './components/pir.js';
 import { RegressionController } from './components/regression.js';
 import { OptimizationController } from './components/optimization.js';
 import { IntegrationController } from './components/integrations.js';
+import { DemoController } from './components/demo.js';
 import { showToast } from './components/toasts.js';
 import { navigation } from './navigation.js';
 
@@ -64,6 +65,9 @@ async function bootstrap() {
 
   const intCtrl = new IntegrationController();
   intCtrl.init();
+
+  const demoCtrl = new DemoController();
+  demoCtrl.init();
 
   // Authoritative workspace navigation registration
   navigation.register('tactical', {

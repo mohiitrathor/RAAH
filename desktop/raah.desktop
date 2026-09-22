@@ -4,7 +4,7 @@ Type=Application
 Name=RAAH Command Center
 GenericName=Emergency Medical Dispatch & Tactical Coordination Platform
 Comment=AI/ML-powered dynamic ambulance dispatch, triage, and hospital coordination
-Exec=/home/glitchedpotato/Downloads/RAAH/bin/raah-desktop
+Exec=raah-desktop
 Icon=raah
 Terminal=false
 StartupNotify=true
@@ -15,4 +15,4 @@ Actions=Fullscreen;
 
 [Desktop Action Fullscreen]
 Name=Open Fullscreen
-Exec=/home/glitchedpotato/Downloads/RAAH/bin/raah-desktop --fullscreen
+Exec=raah-desktop --fullscreen

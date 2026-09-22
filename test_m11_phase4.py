@@ -86,7 +86,8 @@ def run_phase4_tests():
         client.post("/simulation/reset")
 
         # Isolated test directories
-        test_data_dir = Path("/home/glitchedpotato/RAAH/data/optimization/test_p4")
+        REPO_ROOT = Path(__file__).resolve().parent
+        test_data_dir = REPO_ROOT / "data/optimization/test_p4"
         if test_data_dir.exists():
             shutil.rmtree(test_data_dir)
         test_data_dir.mkdir(parents=True, exist_ok=True)
@@ -497,7 +498,7 @@ def run_phase4_tests():
         # TEST 56 & 57: Frontend UI & Zero Dialog Audit
         # ------------------------------------------------------------------
         print("\n[TEST 56 & 57] Frontend UI & zero dialog audit...")
-        opt_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/optimization.js").read_text(encoding="utf-8")
+        opt_js = (REPO_ROOT / "frontend/js/components/optimization.js").read_text(encoding="utf-8")
         assert "learning-safety-score-val" in opt_js
         assert "btn-approve-adapt" in opt_js
         assert re.search(r'\b(alert|prompt|confirm)\s*\(', opt_js) is None

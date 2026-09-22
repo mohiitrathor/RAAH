@@ -359,14 +359,15 @@ def run_phase1_tests():
         # TEST 26 & 27: Frontend Workspace & Zero Dialog Audit
         # --------------------------------------------------------------
         print("\n[TEST 26 & 27] Frontend workspace & dialog audit...")
-        index_html = Path("/home/glitchedpotato/RAAH/frontend/index.html").read_text(encoding="utf-8")
+        REPO_ROOT = Path(__file__).resolve().parent
+        index_html = (REPO_ROOT / "frontend/index.html").read_text(encoding="utf-8")
         assert "nav-btn-optimization" in index_html
         assert "optimization-workspace" in index_html
         assert "OPTIMIZATION MODE" in index_html
         assert "READ-ONLY / RECOMMENDATION ONLY" in index_html
 
         import re
-        opt_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/optimization.js").read_text(encoding="utf-8")
+        opt_js = (REPO_ROOT / "frontend/js/components/optimization.js").read_text(encoding="utf-8")
         assert "OptimizationController" in opt_js
         assert re.search(r'\b(alert|prompt|confirm)\s*\(', opt_js) is None
         print("✓ Frontend HTML/JS wiring verified with zero dialog violations.")

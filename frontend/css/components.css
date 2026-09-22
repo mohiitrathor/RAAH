@@ -1969,4 +1969,126 @@
   color: var(--text-muted);
 }
 
+/* --- DEMO TIMELINE PANEL --- */
+.demo-timeline-panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 320px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(225, 29, 72, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(225, 29, 72, 0.2);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
 
+.demo-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(225, 29, 72, 0.15);
+  border-bottom: 1px solid rgba(225, 29, 72, 0.25);
+}
+
+.demo-timeline-steps {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 6px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.demo-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 2px solid #334155;
+  transition: all 0.2s ease;
+}
+
+.demo-step.active {
+  background: rgba(225, 29, 72, 0.12);
+  border-left-color: #e11d48;
+}
+
+.demo-step.completed {
+  background: rgba(16, 185, 129, 0.08);
+  border-left-color: #10b981;
+}
+
+.demo-step .step-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.demo-step.active .step-num {
+  color: #fda4af;
+}
+
+.demo-step.completed .step-num {
+  color: #6ee7b7;
+}
+
+.demo-step .step-title {
+  flex: 1;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+
+.demo-step.active .step-title {
+  color: #ffffff;
+}
+
+.demo-step.completed .step-title {
+  color: #e2e8f0;
+}
+
+.demo-step .step-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+
+.demo-step .step-badge.pending {
+  color: #475569;
+  background: rgba(71, 85, 105, 0.2);
+}
+
+.demo-step .step-badge.running {
+  color: #fda4af;
+  background: rgba(225, 29, 72, 0.25);
+  animation: pulse 1.2s infinite;
+}
+
+.demo-step .step-badge.done {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.demo-timeline-status-bar {
+  padding: 6px 12px;
+  font-size: 10px;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}

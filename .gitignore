@@ -27,3 +27,12 @@ dist/
 data/logs/
 *.log
 
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+

@@ -300,6 +300,14 @@ class Settings(BaseSettings):
     # ==============================================================
     # VALIDATORS
     # ==============================================================
+    @field_validator("database_path", mode="after")
+    @classmethod
+    def resolve_database_path(cls, v: Path, info) -> Path:
+        if not v.is_absolute():
+            root = info.data.get("root_dir", _REPO_ROOT)
+            return (root / v).resolve()
+        return v
+
     @field_validator("port")
     @classmethod
     def validate_port(cls, v: int) -> int:

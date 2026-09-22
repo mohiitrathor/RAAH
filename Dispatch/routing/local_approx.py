@@ -135,14 +135,17 @@ class LocalApproxRouter(RouterBase):
         Waypoints follow an organic, natural road corridor shape.
         """
         straight_dist = self.calculate_straight_line_distance(origin, destination)
-        route_dist = self.calculate_distance(origin, destination)
-        eta_mins = self.calculate_eta(
-            origin,
-            destination,
-            vehicle_type=vehicle_type,
-            traffic_level=traffic_level,
-            road_condition=road_condition,
+        route_dist = round(straight_dist * self.circuity_factor, 3)
+        speed_kmh = self.AMBULANCE_SPEEDS.get(
+            str(vehicle_type).upper(),
+            self.AMBULANCE_SPEEDS["DEFAULT"],
         )
+        if speed_kmh <= 0:
+            speed_kmh = 50.0
+        base_eta = (route_dist / speed_kmh) * 60.0
+        t_mult = self.TRAFFIC_MULTIPLIERS.get(str(traffic_level).upper(), 1.0)
+        r_mult = self.ROAD_MULTIPLIERS.get(str(road_condition).upper(), 1.0)
+        eta_mins = round(max(0.1, base_eta * t_mult * r_mult), 2)
 
         lat1, lon1 = float(origin[0]), float(origin[1])
         lat2, lon2 = float(destination[0]), float(destination[1])

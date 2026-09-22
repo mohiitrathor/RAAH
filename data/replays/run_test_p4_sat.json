@@ -5,13 +5,13 @@
     "run_id": "run_test_p4_sat",
     "start_sim_time": 0,
     "end_sim_time": 10,
-    "wall_clock_duration_seconds": 0.4038,
+    "wall_clock_duration_seconds": 0.2831,
     "event_count": 36,
     "snapshot_count": 7,
     "completion_status": "COMPLETED",
     "deterministic_seed": 42,
     "replay_format_version": "1.0.0",
-    "created_at": "2026-09-03T06:47:22.884466+00:00"
+    "created_at": "2026-09-21T13:29:26.315660+00:00"
   },
   "scenario_definition": {
     "scenario_id": "DRILL_P4_SAT",
@@ -228,7 +228,7 @@
         "tick_minutes": 1.0,
         "seed": 42
       },
-      "timestamp": "2026-09-03T06:47:22.535109+00:00"
+      "timestamp": "2026-09-21T13:29:26.080939+00:00"
     },
     {
       "event_id": 2,
@@ -246,7 +246,7 @@
         "hospital_id": "HOSP_117",
         "eta_minutes": 0.8
       },
-      "timestamp": "2026-09-03T06:47:22.560845+00:00"
+      "timestamp": "2026-09-21T13:29:26.098566+00:00"
     },
     {
       "event_id": 3,
@@ -264,7 +264,7 @@
         "hospital_id": "HOSP_289",
         "eta_minutes": 2.28
       },
-      "timestamp": "2026-09-03T06:47:22.580963+00:00"
+      "timestamp": "2026-09-21T13:29:26.110482+00:00"
     },
     {
       "event_id": 4,
@@ -282,7 +282,7 @@
         "hospital_id": "HOSP_064",
         "eta_minutes": 0.43
       },
-      "timestamp": "2026-09-03T06:47:22.602270+00:00"
+      "timestamp": "2026-09-21T13:29:26.122508+00:00"
     },
     {
       "event_id": 5,
@@ -295,7 +295,7 @@
       "payload": {
         "message": "Ambulance AMB_0733 arrived at destination HOSP_117."
       },
-      "timestamp": "2026-09-03T06:47:22.602558+00:00"
+      "timestamp": "2026-09-21T13:29:26.122722+00:00"
     },
     {
       "event_id": 6,
@@ -308,7 +308,7 @@
       "payload": {
         "message": "Ambulance AMB_0759 arrived at destination HOSP_064."
       },
-      "timestamp": "2026-09-03T06:47:22.602567+00:00"
+      "timestamp": "2026-09-21T13:29:26.122730+00:00"
     },
     {
       "event_id": 7,
@@ -320,7 +320,7 @@
       "payload": {
         "message": "Hospital HOSP_001 marked SATURATED."
       },
-      "timestamp": "2026-09-03T06:47:22.602577+00:00"
+      "timestamp": "2026-09-21T13:29:26.122737+00:00"
     },
     {
       "event_id": 8,
@@ -338,7 +338,7 @@
         "hospital_id": "HOSP_107",
         "eta_minutes": 1.06
       },
-      "timestamp": "2026-09-03T06:47:22.622557+00:00"
+      "timestamp": "2026-09-21T13:29:26.137739+00:00"
     },
     {
       "event_id": 9,
@@ -356,7 +356,7 @@
         "hospital_id": "HOSP_117",
         "eta_minutes": 2.1
       },
-      "timestamp": "2026-09-03T06:47:22.642657+00:00"
+      "timestamp": "2026-09-21T13:29:26.149699+00:00"
     },
     {
       "event_id": 10,
@@ -368,7 +368,7 @@
       "payload": {
         "message": "Hospital HOSP_084 marked SATURATED."
       },
-      "timestamp": "2026-09-03T06:47:22.648093+00:00"
+      "timestamp": "2026-09-21T13:29:26.154788+00:00"
     },
     {
       "event_id": 11,
@@ -386,7 +386,7 @@
         "hospital_id": "HOSP_064",
         "eta_minutes": 2.04
       },
-      "timestamp": "2026-09-03T06:47:22.668946+00:00"
+      "timestamp": "2026-09-21T13:29:26.167027+00:00"
     },
     {
       "event_id": 12,
@@ -404,7 +404,7 @@
         "hospital_id": "HOSP_116",
         "eta_minutes": 0.47
       },
-      "timestamp": "2026-09-03T06:47:22.688911+00:00"
+      "timestamp": "2026-09-21T13:29:26.178711+00:00"
     },
     {
       "event_id": 13,
@@ -417,7 +417,7 @@
       "payload": {
         "message": "Ambulance AMB_0043 arrived at destination HOSP_116."
       },
-      "timestamp": "2026-09-03T06:47:22.689384+00:00"
+      "timestamp": "2026-09-21T13:29:26.178922+00:00"
     },
     {
       "event_id": 14,
@@ -430,7 +430,7 @@
       "payload": {
         "message": "Ambulance AMB_0468 arrived at destination HOSP_107."
       },
-      "timestamp": "2026-09-03T06:47:22.689395+00:00"
+      "timestamp": "2026-09-21T13:29:26.178929+00:00"
     },
     {
       "event_id": 15,
@@ -443,7 +443,7 @@
       "payload": {
         "message": "Ambulance AMB_0692 arrived at destination HOSP_289."
       },
-      "timestamp": "2026-09-03T06:47:22.689400+00:00"
+      "timestamp": "2026-09-21T13:29:26.178934+00:00"
     },
     {
       "event_id": 16,
@@ -461,7 +461,7 @@
         "hospital_id": "HOSP_116",
         "eta_minutes": 1.0
       },
-      "timestamp": "2026-09-03T06:47:22.709403+00:00"
+      "timestamp": "2026-09-21T13:29:26.190610+00:00"
     },
     {
       "event_id": 17,
@@ -479,7 +479,7 @@
         "hospital_id": "HOSP_064",
         "eta_minutes": 1.44
       },
-      "timestamp": "2026-09-03T06:47:22.729366+00:00"
+      "timestamp": "2026-09-21T13:29:26.202504+00:00"
     },
     {
       "event_id": 18,
@@ -492,7 +492,7 @@
       "payload": {
         "message": "Ambulance AMB_0083 arrived at destination HOSP_116."
       },
-      "timestamp": "2026-09-03T06:47:22.729604+00:00"
+      "timestamp": "2026-09-21T13:29:26.202708+00:00"
     },
     {
       "event_id": 19,
@@ -505,7 +505,7 @@
       "payload": {
         "message": "Ambulance AMB_0266 arrived at destination HOSP_117."
       },
-      "timestamp": "2026-09-03T06:47:22.729612+00:00"
+      "timestamp": "2026-09-21T13:29:26.202715+00:00"
     },
     {
       "event_id": 20,
@@ -517,7 +517,7 @@
       "payload": {
         "message": "Hospital HOSP_117 marked SATURATED."
       },
-      "timestamp": "2026-09-03T06:47:22.734991+00:00"
+      "timestamp": "2026-09-21T13:29:26.207488+00:00"
     },
     {
       "event_id": 21,
@@ -535,7 +535,7 @@
         "hospital_id": "HOSP_087",
         "eta_minutes": 1.23
       },
-      "timestamp": "2026-09-03T06:47:22.755630+00:00"
+      "timestamp": "2026-09-21T13:29:26.219479+00:00"
     },
     {
       "event_id": 22,
@@ -553,7 +553,7 @@
         "hospital_id": "HOSP_003",
         "eta_minutes": 2.5
       },
-      "timestamp": "2026-09-03T06:47:22.776134+00:00"
+      "timestamp": "2026-09-21T13:29:26.231653+00:00"
     },
     {
       "event_id": 23,
@@ -566,7 +566,7 @@
       "payload": {
         "message": "Ambulance AMB_0273 arrived at destination HOSP_064."
       },
-      "timestamp": "2026-09-03T06:47:22.776358+00:00"
+      "timestamp": "2026-09-21T13:29:26.231851+00:00"
     },
     {
       "event_id": 24,
@@ -579,7 +579,7 @@
       "payload": {
         "message": "Ambulance AMB_0279 arrived at destination HOSP_064."
       },
-      "timestamp": "2026-09-03T06:47:22.776365+00:00"
+      "timestamp": "2026-09-21T13:29:26.231858+00:00"
     },
     {
       "event_id": 25,
@@ -597,7 +597,7 @@
         "hospital_id": "HOSP_107",
         "eta_minutes": 0.57
       },
-      "timestamp": "2026-09-03T06:47:22.796235+00:00"
+      "timestamp": "2026-09-21T13:29:26.243648+00:00"
     },
     {
       "event_id": 26,
@@ -615,7 +615,7 @@
         "hospital_id": "HOSP_071",
         "eta_minutes": 2.92
       },
-      "timestamp": "2026-09-03T06:47:22.816233+00:00"
+      "timestamp": "2026-09-21T13:29:26.259267+00:00"
     },
     {
       "event_id": 27,
@@ -628,7 +628,7 @@
       "payload": {
         "message": "Ambulance AMB_0712 arrived at destination HOSP_087."
       },
-      "timestamp": "2026-09-03T06:47:22.816457+00:00"
+      "timestamp": "2026-09-21T13:29:26.259489+00:00"
     },
     {
       "event_id": 28,
@@ -641,7 +641,7 @@
       "payload": {
         "message": "Ambulance AMB_0782 arrived at destination HOSP_107."
       },
-      "timestamp": "2026-09-03T06:47:22.816464+00:00"
+      "timestamp": "2026-09-21T13:29:26.259497+00:00"
     },
     {
       "event_id": 29,
@@ -653,7 +653,7 @@
       "payload": {
         "message": "Hospital HOSP_001 saturation cleared."
       },
-      "timestamp": "2026-09-03T06:47:22.821833+00:00"
+      "timestamp": "2026-09-21T13:29:26.265773+00:00"
     },
     {
       "event_id": 30,
@@ -671,7 +671,7 @@
         "hospital_id": "HOSP_064",
         "eta_minutes": 0.9
       },
-      "timestamp": "2026-09-03T06:47:22.842249+00:00"
+      "timestamp": "2026-09-21T13:29:26.280866+00:00"
     },
     {
       "event_id": 31,
@@ -689,7 +689,7 @@
         "hospital_id": "HOSP_107",
         "eta_minutes": 1.12
       },
-      "timestamp": "2026-09-03T06:47:22.863709+00:00"
+      "timestamp": "2026-09-21T13:29:26.298526+00:00"
     },
     {
       "event_id": 32,
@@ -702,7 +702,7 @@
       "payload": {
         "message": "Ambulance AMB_0359 arrived at destination HOSP_003."
       },
-      "timestamp": "2026-09-03T06:47:22.863959+00:00"
+      "timestamp": "2026-09-21T13:29:26.298757+00:00"
     },
     {
       "event_id": 33,
@@ -715,7 +715,7 @@
       "payload": {
         "message": "Ambulance AMB_0849 arrived at destination HOSP_064."
       },
-      "timestamp": "2026-09-03T06:47:22.863967+00:00"
+      "timestamp": "2026-09-21T13:29:26.298764+00:00"
     },
     {
       "event_id": 34,
@@ -728,7 +728,7 @@
       "payload": {
         "message": "Ambulance AMB_0585 arrived at destination HOSP_071."
       },
-      "timestamp": "2026-09-03T06:47:22.864143+00:00"
+      "timestamp": "2026-09-21T13:29:26.298904+00:00"
     },
     {
       "event_id": 35,
@@ -741,7 +741,7 @@
       "payload": {
         "message": "Ambulance AMB_0768 arrived at destination HOSP_107."
       },
-      "timestamp": "2026-09-03T06:47:22.864150+00:00"
+      "timestamp": "2026-09-21T13:29:26.298909+00:00"
     },
     {
       "event_id": 36,
@@ -755,7 +755,7 @@
         "final_sim_time": 10,
         "total_events": 35
       },
-      "timestamp": "2026-09-03T06:47:22.884446+00:00"
+      "timestamp": "2026-09-21T13:29:26.315608+00:00"
     }
   ],
   "snapshots": [
@@ -17560,7 +17560,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.540108+00:00"
+      "timestamp": "2026-09-21T13:29:26.085832+00:00"
     },
     {
       "snapshot_id": 2,
@@ -20977,43 +20977,15 @@
           "ambulance_id": "AMB_0266",
           "ambulance_type": "Critical Care",
           "status": "EN_ROUTE",
-          "latitude": 26.888127,
-          "longitude": 75.763633,
+          "latitude": 26.892627,
+          "longitude": 75.736158,
           "incident_id": 100025,
           "hospital_id": "HOSP_117",
           "eta_minutes": 1.1,
           "route_waypoints": [
             [
-              26.888127,
-              75.763633
-            ],
-            [
-              26.888984,
-              75.762046
-            ],
-            [
-              26.890903,
-              75.758423
-            ],
-            [
-              26.892472,
-              75.754716
-            ],
-            [
-              26.893457,
-              75.750867
-            ],
-            [
-              26.893777,
-              75.746859
-            ],
-            [
-              26.893523,
-              75.742712
-            ],
-            [
-              26.892942,
-              75.738485
+              26.892627,
+              75.736158
             ],
             [
               26.89237,
@@ -23474,67 +23446,15 @@
           "ambulance_id": "AMB_0468",
           "ambulance_type": "Advanced Life Support",
           "status": "EN_ROUTE",
-          "latitude": 26.894719,
-          "longitude": 75.743203,
+          "latitude": 26.876102,
+          "longitude": 75.69932,
           "incident_id": 100024,
           "hospital_id": "HOSP_107",
           "eta_minutes": 0.06000000000000005,
           "route_waypoints": [
             [
-              26.894719,
-              75.743203
-            ],
-            [
-              26.894614,
-              75.741777
-            ],
-            [
-              26.894094,
-              75.737924
-            ],
-            [
-              26.892874,
-              75.734313
-            ],
-            [
-              26.890735,
-              75.731019
-            ],
-            [
-              26.887801,
-              75.728001
-            ],
-            [
-              26.8845,
-              75.72511
-            ],
-            [
-              26.881406,
-              75.722147
-            ],
-            [
-              26.879026,
-              75.718937
-            ],
-            [
-              26.877617,
-              75.715392
-            ],
-            [
-              26.877088,
-              75.711541
-            ],
-            [
-              26.877043,
-              75.707524
-            ],
-            [
-              26.876933,
-              75.703529
-            ],
-            [
-              26.87627,
-              75.699725
+              26.876102,
+              75.69932
             ],
             [
               26.874810776643088,
@@ -26223,31 +26143,15 @@
           "ambulance_id": "AMB_0692",
           "ambulance_type": "Advanced Life Support",
           "status": "EN_ROUTE",
-          "latitude": 26.924,
-          "longitude": 75.77616,
+          "latitude": 26.914927,
+          "longitude": 75.783232,
           "incident_id": 100022,
           "hospital_id": "HOSP_289",
           "eta_minutes": 0.2799999999999998,
           "route_waypoints": [
             [
-              26.924,
-              75.77616
-            ],
-            [
-              26.923922,
-              75.776388
-            ],
-            [
-              26.922808,
-              75.779605
-            ],
-            [
-              26.920731,
-              75.7817
-            ],
-            [
-              26.917639,
-              75.782612
+              26.914927,
+              75.783232
             ],
             [
               26.9144,
@@ -34571,7 +34475,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.648042+00:00"
+      "timestamp": "2026-09-21T13:29:26.154740+00:00"
     },
     {
       "snapshot_id": 3,
@@ -38108,51 +38012,15 @@
           "ambulance_id": "AMB_0273",
           "ambulance_type": "Advanced Life Support",
           "status": "EN_ROUTE",
-          "latitude": 26.940011,
-          "longitude": 75.778507,
+          "latitude": 26.919702,
+          "longitude": 75.753877,
           "incident_id": 100026,
           "hospital_id": "HOSP_064",
           "eta_minutes": 0.040000000000000036,
           "route_waypoints": [
             [
-              26.940011,
-              75.778507
-            ],
-            [
-              26.93907,
-              75.777425
-            ],
-            [
-              26.935718,
-              75.775419
-            ],
-            [
-              26.931788,
-              75.773766
-            ],
-            [
-              26.92805,
-              75.771995
-            ],
-            [
-              26.9252,
-              75.769682
-            ],
-            [
-              26.923518,
-              75.766657
-            ],
-            [
-              26.922737,
-              75.76308
-            ],
-            [
-              26.922188,
-              75.759362
-            ],
-            [
-              26.921139,
-              75.755949
+              26.919702,
+              75.753877
             ],
             [
               26.91916440137077,
@@ -38225,51 +38093,15 @@
           "ambulance_id": "AMB_0279",
           "ambulance_type": "Critical Care",
           "status": "EN_ROUTE",
-          "latitude": 26.940929,
-          "longitude": 75.798886,
+          "latitude": 26.922502,
+          "longitude": 75.770742,
           "incident_id": 100029,
           "hospital_id": "HOSP_064",
           "eta_minutes": 0.43999999999999995,
           "route_waypoints": [
             [
-              26.940929,
-              75.798886
-            ],
-            [
-              26.94077,
-              75.797503
-            ],
-            [
-              26.940097,
-              75.793701
-            ],
-            [
-              26.938734,
-              75.790169
-            ],
-            [
-              26.936465,
-              75.78699
-            ],
-            [
-              26.933413,
-              75.784118
-            ],
-            [
-              26.929999,
-              75.781386
-            ],
-            [
-              26.926788,
-              75.778576
-            ],
-            [
-              26.924283,
-              75.77549
-            ],
-            [
-              26.922733,
-              75.77203
+              26.922502,
+              75.770742
             ],
             [
               26.922051,
@@ -51465,7 +51297,7 @@
           ],
           "target_capacity": 6,
           "available_count": 119,
-          "total_count": 179,
+          "total_count": 178,
           "demand_weight": 0.8,
           "coverage_score": 24.79,
           "status": "SURPLUS"
@@ -51483,7 +51315,7 @@
           ],
           "target_capacity": 4,
           "available_count": 61,
-          "total_count": 91,
+          "total_count": 90,
           "demand_weight": 0.8,
           "coverage_score": 19.06,
           "status": "SURPLUS"
@@ -51501,7 +51333,7 @@
           ],
           "target_capacity": 5,
           "available_count": 117,
-          "total_count": 185,
+          "total_count": 187,
           "demand_weight": 0.8,
           "coverage_score": 29.25,
           "status": "SURPLUS"
@@ -51561,7 +51393,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.734936+00:00"
+      "timestamp": "2026-09-21T13:29:26.207454+00:00"
     },
     {
       "snapshot_id": 4,
@@ -56166,15 +55998,15 @@
           "ambulance_id": "AMB_0359",
           "ambulance_type": "Advanced Life Support",
           "status": "EN_ROUTE",
-          "latitude": 26.895522,
-          "longitude": 75.741918,
+          "latitude": 26.89539,
+          "longitude": 75.741651,
           "incident_id": 100031,
           "hospital_id": "HOSP_003",
           "eta_minutes": 0.5,
           "route_waypoints": [
             [
-              26.895522,
-              75.741918
+              26.89539,
+              75.741651
             ],
             [
               26.895835,
@@ -58891,27 +58723,15 @@
           "ambulance_id": "AMB_0585",
           "ambulance_type": "Advanced Life Support",
           "status": "EN_ROUTE",
-          "latitude": 26.967216,
-          "longitude": 75.779982,
+          "latitude": 26.972353,
+          "longitude": 75.77261,
           "incident_id": 100033,
           "hospital_id": "HOSP_071",
           "eta_minutes": 1.92,
           "route_waypoints": [
             [
-              26.967216,
-              75.779982
-            ],
-            [
-              26.968281,
-              75.779296
-            ],
-            [
-              26.970893,
-              75.776753
-            ],
-            [
-              26.97229,
-              75.773415
+              26.972353,
+              75.77261
             ],
             [
               26.972607,
@@ -68543,7 +68363,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.821786+00:00"
+      "timestamp": "2026-09-21T13:29:26.265697+00:00"
     },
     {
       "snapshot_id": 5,
@@ -85481,7 +85301,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.873173+00:00"
+      "timestamp": "2026-09-21T13:29:26.303692+00:00"
     },
     {
       "snapshot_id": 6,
@@ -102419,7 +102239,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.878464+00:00"
+      "timestamp": "2026-09-21T13:29:26.309034+00:00"
     },
     {
       "snapshot_id": 7,
@@ -119357,7 +119177,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.884344+00:00"
+      "timestamp": "2026-09-21T13:29:26.315358+00:00"
     }
   ],
   "final_summary": {

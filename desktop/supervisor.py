@@ -125,8 +125,9 @@ class BackendSupervisor:
             return env_py
 
         candidates: List[str] = [
-            # 1. Known dedicated conda environments
-            "/home/glitchedpotato/miniconda3/envs/ai_env/bin/python",
+            # 1. Current runtime Python interpreter
+            sys.executable,
+            # 2. Known dedicated conda environments
             os.path.expanduser("~/miniconda3/envs/ai_env/bin/python"),
             os.path.expanduser("~/anaconda3/envs/ai_env/bin/python"),
             os.path.expanduser("~/.conda/envs/ai_env/bin/python"),

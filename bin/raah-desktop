@@ -55,7 +55,6 @@ if [ -z "${RAAH_PYTHON}" ]; then
         "${HOME}/miniconda3/envs/ai_env/bin/python" \
         "${HOME}/anaconda3/envs/ai_env/bin/python" \
         "${HOME}/.conda/envs/ai_env/bin/python" \
-        "/home/glitchedpotato/miniconda3/envs/ai_env/bin/python" \
         "${REPO_DIR}/.venv/bin/python" \
         "${REPO_DIR}/venv/bin/python"; do
         if [ -x "${ENV_CAND}" ]; then

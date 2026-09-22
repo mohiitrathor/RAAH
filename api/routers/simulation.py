@@ -64,14 +64,33 @@ def simulation_tick(
 
     with lock:
 
+        prev_decisions_count = len(sim.logger.get_decisions()) if hasattr(sim, "logger") else 0
         sim.advance_time(minutes)
         sim.process_events()
         sim.check_redirections()
+        new_decisions = sim.logger.get_decisions()[prev_decisions_count:] if hasattr(sim, "logger") else []
 
         data = SimulationOutput.dashboard_snapshot(
             sim.state
         )
         cur_time = int(sim.state.current_time)
+
+        try:
+            from dataclasses import asdict
+            from api.decision_evidence import evidence_store
+            for d in new_decisions:
+                payload = asdict(d) if hasattr(d, "__dataclass_fields__") else (dict(d) if hasattr(d, "items") else getattr(d, "__dict__", {}))
+                evidence_store.record_redirection(
+                    decision_payload=payload,
+                    sim_time=cur_time,
+                )
+                broadcaster.broadcast(
+                    EventType.REDIRECTION_EXECUTED,
+                    payload,
+                    cur_time,
+                )
+        except Exception:
+            pass
         fleet_counts = data.get("fleet", {})
         active_inc_count = len(data.get("active_incidents", []))
         moving_ambs = [

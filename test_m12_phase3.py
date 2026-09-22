@@ -67,6 +67,7 @@ from api.persistence import (
 )
 
 client = TestClient(app)
+manager.initialize()
 
 
 def auth_header(role: Role = Role.ADMINISTRATOR) -> Dict[str, str]:

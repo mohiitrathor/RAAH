@@ -360,5 +360,9 @@ def run_m8_tests():
     print("=" * 70 + "\n")
 
 
+def test_m8():
+    run_m8_tests()
+
+
 if __name__ == "__main__":
     run_m8_tests()

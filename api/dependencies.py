@@ -93,6 +93,30 @@ class SimulatorManager:
             self._consecutive_errors = 0
             self._last_error = None
 
+        try:
+            from api.realtime.broadcaster import broadcaster
+            with broadcaster._lock:
+                broadcaster._is_shutdown = False
+        except Exception:
+            pass
+
+        try:
+            from dispatch_engine import load_data, predict_severity
+            import pandas as pd
+            _, _, _, _, model = load_data()
+            dummy_input = pd.DataFrame([{
+                "Age": 50, "Sex": "Female", "Condition": "General", "Heart_Rate": 80.0,
+                "Respiratory_Rate": 16.0, "Systolic_BP": 120.0, "Diastolic_BP": 80.0,
+                "SpO2": 98.0, "Temperature": 37.0, "GCS": 15, "Pain_Score": 0,
+                "Blood_Glucose": 100.0, "Oxygen_Requirement": "No Oxygen",
+                "Consciousness": "Alert", "Injury_Type": "No Injury", "Arrival_Mode": "Ambulance",
+                "Respiratory_Distress": 0, "Chest_Pain": 0, "Bleeding": 0, "Seizure": 0,
+                "Diabetes": 0, "Hypertension": 0, "Heart_Disease": 0, "Respiratory_Disease": 0,
+            }])
+            predict_severity(model, dummy_input)
+        except Exception:
+            pass
+
         if not persistence_bridge._is_started:
             persistence_bridge.start()
 
@@ -551,14 +575,7 @@ class SimulatorManager:
             try:
                 with self._lock:
                     delta_mins = float(self._minutes_per_tick)
-                    self._simulator.advance_ambulances(delta_mins)
-
-                    self._sim_time_accumulator += delta_mins
-                    if self._sim_time_accumulator >= 1.0:
-                        mins_to_advance = int(self._sim_time_accumulator)
-                        self._sim_time_accumulator -= mins_to_advance
-                        self._simulator.advance_simulation_clock(mins_to_advance)
-
+                    self._simulator.advance_time(delta_mins)
                     self._simulator.process_events()
                     self._simulator.check_redirections()
 
@@ -837,6 +854,13 @@ class SimulatorManager:
                 self._simulator.run_id = new_run_id
                 self._recovery_status = RecoveryStatus.CLEAN_START
                 self._recovered_checkpoint_id = None
+
+            try:
+                from api.realtime.broadcaster import broadcaster
+                with broadcaster._lock:
+                    broadcaster._is_shutdown = False
+            except Exception:
+                pass
 
 
 # ==============================================================

@@ -1,6 +1,6 @@
 [
   {
-    "execution_id": "EXEC_4E4371BDD84B",
+    "execution_id": "EXEC_4E13D21C61B4",
     "recommendation_id": "REC_AUTO_OK",
     "recommendation_type": "FLEET_REPOSITION",
     "operator_id": "AUTONOMOUS_POLICY_ENGINE",
@@ -30,9 +30,9 @@
     "outcome": "SUCCESSFUL",
     "rollback_of": null,
     "kill_switch_state": false,
-    "requested_at": "2026-09-03T06:46:08.180973+00:00",
-    "approved_at": "2026-09-03T06:46:08.180973+00:00",
-    "executed_at": "2026-09-03T06:46:08.180973+00:00",
+    "requested_at": "2026-09-21T13:30:23.140905+00:00",
+    "approved_at": "2026-09-21T13:30:23.140905+00:00",
+    "executed_at": "2026-09-21T13:30:23.140905+00:00",
     "state_hash_before": "86accf29c496e6492506",
     "state_hash_after": "09b75471db494f2baa2d",
     "action_parameters": {
@@ -147,7 +147,7 @@
     }
   },
   {
-    "execution_id": "EXEC_39370A010F52",
+    "execution_id": "EXEC_FAEF6EA90C8D",
     "recommendation_id": "REC_HUMAN_01",
     "recommendation_type": "FLEET_REPOSITION",
     "operator_id": "OP_TEST",
@@ -164,9 +164,9 @@
     "outcome": "PENDING",
     "rollback_of": null,
     "kill_switch_state": false,
-    "requested_at": "2026-09-03T06:46:08.192592+00:00",
-    "approved_at": "2026-09-03T06:46:08.192592+00:00",
-    "executed_at": "2026-09-03T06:46:08.192592+00:00",
+    "requested_at": "2026-09-21T13:30:23.153346+00:00",
+    "approved_at": "2026-09-21T13:30:23.153346+00:00",
+    "executed_at": "2026-09-21T13:30:23.153346+00:00",
     "state_hash_before": "09b75471db494f2baa2d",
     "state_hash_after": "1e062a422945357f2c0d",
     "action_parameters": {
@@ -281,11 +281,11 @@
     }
   },
   {
-    "execution_id": "ROLLBACK_882BD4E9",
+    "execution_id": "ROLLBACK_A967C9C7",
     "recommendation_id": "REC_AUTO_OK",
     "recommendation_type": "FLEET_REPOSITION_ROLLBACK",
     "operator_id": "OP_LEAD",
-    "operator_note": "Rollback of EXEC_4E4371BDD84B: Operator manual rollback",
+    "operator_note": "Rollback of EXEC_4E13D21C61B4: Operator manual rollback",
     "execution_mode": "OPERATOR_APPROVED",
     "policy_mode": "GUARDED",
     "policy_decision": "ROLLBACK_EXECUTED",
@@ -296,11 +296,11 @@
     "predicted_benefit": 0.0,
     "actual_benefit": 0.0,
     "outcome": "PENDING",
-    "rollback_of": "EXEC_4E4371BDD84B",
+    "rollback_of": "EXEC_4E13D21C61B4",
     "kill_switch_state": false,
-    "requested_at": "2026-09-03T06:46:08.221625+00:00",
-    "approved_at": "2026-09-03T06:46:08.221625+00:00",
-    "executed_at": "2026-09-03T06:46:08.221625+00:00",
+    "requested_at": "2026-09-21T13:30:23.181354+00:00",
+    "approved_at": "2026-09-21T13:30:23.181354+00:00",
+    "executed_at": "2026-09-21T13:30:23.181354+00:00",
     "state_hash_before": "1e062a422945357f2c0d",
     "state_hash_after": "1e062a422945357f2c0d",
     "action_parameters": {
@@ -405,7 +405,7 @@
     "failure_reason": null,
     "resulting_entity_ids": {
       "ambulance_id": "AMB_0002",
-      "rolled_back_execution_id": "EXEC_4E4371BDD84B",
+      "rolled_back_execution_id": "EXEC_4E13D21C61B4",
       "return_zone": "JAIPUR_CENTRAL"
     }
   },
@@ -427,9 +427,9 @@
     "outcome": "PENDING",
     "rollback_of": null,
     "kill_switch_state": false,
-    "requested_at": "2026-09-03T06:46:08.230633+00:00",
-    "approved_at": "2026-09-03T06:46:08.230633+00:00",
-    "executed_at": "2026-09-03T06:46:08.230633+00:00",
+    "requested_at": "2026-09-21T13:30:23.189984+00:00",
+    "approved_at": "2026-09-21T13:30:23.189984+00:00",
+    "executed_at": "2026-09-21T13:30:23.189984+00:00",
     "state_hash_before": "",
     "state_hash_after": "",
     "action_parameters": {},
@@ -441,7 +441,7 @@
     }
   },
   {
-    "execution_id": "EXEC_C2891C5880AA",
+    "execution_id": "EXEC_0F80BA8C8877",
     "recommendation_id": "REC_AUTO_OK",
     "recommendation_type": "FLEET_REPOSITION",
     "operator_id": "OP_REPEAT",
@@ -458,9 +458,9 @@
     "outcome": "PENDING",
     "rollback_of": null,
     "kill_switch_state": false,
-    "requested_at": "2026-09-03T06:46:08.355549+00:00",
-    "approved_at": "2026-09-03T06:46:08.355549+00:00",
-    "executed_at": "2026-09-03T06:46:08.355549+00:00",
+    "requested_at": "2026-09-21T13:30:23.280375+00:00",
+    "approved_at": "2026-09-21T13:30:23.280375+00:00",
+    "executed_at": "2026-09-21T13:30:23.280375+00:00",
     "state_hash_before": "",
     "state_hash_after": "",
     "action_parameters": {},

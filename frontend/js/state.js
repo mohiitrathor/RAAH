@@ -21,6 +21,7 @@ class Store {
       },
       hospitals: new Map(), // hospital_id -> Hospital object
       ambulances: new Map(), // ambulance_id -> Ambulance object
+      incidents: new Map(), // incident_id -> Incident object (cache)
       events: [],
       decisions: [],
       selectedIncidentId: null,
@@ -97,8 +98,18 @@ class Store {
         this.state.ambulances.set(aid, { ...moving });
       }
 
-      // Sync ETA and arrival status to assigned active incidents
+      // Sync ETA and arrival status to assigned active incidents & cached incidents
       for (const inc of this.state.activeIncidents) {
+        if (String(inc.ambulance_id) === aid) {
+          if (moving.eta_minutes !== undefined && moving.eta_minutes !== null) {
+            inc.eta_minutes = moving.eta_minutes;
+          }
+          if (moving.status === 'ARRIVED') {
+            inc.status = 'ARRIVED';
+          }
+        }
+      }
+      for (const inc of this.state.incidents.values()) {
         if (String(inc.ambulance_id) === aid) {
           if (moving.eta_minutes !== undefined && moving.eta_minutes !== null) {
             inc.eta_minutes = moving.eta_minutes;
@@ -119,7 +130,9 @@ class Store {
     if (dashboardData.active_incidents) {
       const merged = dashboardData.active_incidents.map(newInc => {
         const existing = this.state.activeIncidents.find(i => i.incident_id === newInc.incident_id);
-        return existing ? { ...existing, ...newInc } : newInc;
+        const mergedInc = existing ? { ...existing, ...newInc } : newInc;
+        this.state.incidents.set(mergedInc.incident_id, mergedInc);
+        return mergedInc;
       });
       this.state.activeIncidents = merged;
       changed.push('activeIncidents');
@@ -139,6 +152,7 @@ class Store {
   // Non-destructive single incident addition or update
   addOrUpdateIncident(incident) {
     if (!incident || incident.incident_id === undefined) return;
+    this.state.incidents.set(incident.incident_id, { ...incident });
     const idx = this.state.activeIncidents.findIndex(i => i.incident_id === incident.incident_id);
     if (idx >= 0) {
       this.state.activeIncidents[idx] = { ...this.state.activeIncidents[idx], ...incident };

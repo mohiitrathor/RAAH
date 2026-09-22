@@ -156,27 +156,76 @@ def predict_severity(
         probabilities
     """
 
-    prediction = model.predict(
-        incident
-    )[0]
-
     confidence = None
     probabilities = None
 
-    if hasattr(
-        model,
-        "predict_proba",
-    ):
+    # Fast-path for single incident inference avoiding scikit-learn ColumnTransformer parallel overhead
+    if hasattr(model, "named_steps") and "preprocessor" in model.named_steps and "classifier" in model.named_steps:
+        try:
+            if not hasattr(model, "_fast_infer_meta"):
+                prep = model.named_steps["preprocessor"]
+                cat_encoder = prep.named_transformers_["categorical"]
+                num_scaler = prep.named_transformers_["numeric"]
+                cat_cols = ['Sex', 'Condition', 'Oxygen_Requirement', 'Consciousness', 'Injury_Type', 'Arrival_Mode']
+                num_cols = ['Age', 'Heart_Rate', 'SpO2', 'Systolic_BP', 'Diastolic_BP', 'Respiratory_Rate', 'Temperature', 'GCS', 'Pain_Score', 'Blood_Glucose', 'Respiratory_Distress', 'Chest_Pain', 'Bleeding', 'Seizure', 'Diabetes', 'Hypertension', 'Heart_Disease', 'Respiratory_Disease']
+                cat_cats = cat_encoder.categories_
+                cat_maps = [{val: idx for idx, val in enumerate(cats)} for cats in cat_cats]
+                cat_offsets = [0]
+                for cats in cat_cats[:-1]:
+                    cat_offsets.append(cat_offsets[-1] + len(cats))
+                total_cat_dim = cat_offsets[-1] + len(cat_cats[-1])
+                model._fast_infer_meta = {
+                    "clf": model.named_steps["classifier"],
+                    "cat_cols": cat_cols,
+                    "num_cols": num_cols,
+                    "cat_maps": cat_maps,
+                    "cat_offsets": cat_offsets,
+                    "total_cat_dim": total_cat_dim,
+                    "means": num_scaler.mean_,
+                    "scales": num_scaler.scale_,
+                    "classes": model.named_steps["classifier"].classes_,
+                }
 
-        probabilities = (
-            model.predict_proba(
-                incident
-            )[0]
-        )
+            meta = model._fast_infer_meta
+            if hasattr(incident, "iloc"):
+                if len(incident) == 1:
+                    row = incident.iloc[0]
+                else:
+                    row = None
+            elif isinstance(incident, dict):
+                row = incident
+            else:
+                row = incident
 
-        confidence = float(
-            np.max(probabilities)
-        )
+            if row is not None:
+                vec = np.zeros(44, dtype=np.float64)
+                for col, mapping, offset in zip(meta["cat_cols"], meta["cat_maps"], meta["cat_offsets"]):
+                    val = row[col] if hasattr(row, "__getitem__") else getattr(row, col, None)
+                    if val in mapping:
+                        vec[offset + mapping[val]] = 1.0
+
+                num_vals = np.array([float(row[c]) if hasattr(row, "__getitem__") else float(getattr(row, c, 0.0)) for c in meta["num_cols"]], dtype=np.float64)
+                vec[meta["total_cat_dim"]:] = (num_vals - meta["means"]) / meta["scales"]
+                probabilities = meta["clf"].predict_proba(vec.reshape(1, -1))[0]
+                confidence = float(np.max(probabilities))
+                prediction = meta["classes"][np.argmax(probabilities)]
+                return (
+                    str(prediction),
+                    confidence,
+                    probabilities,
+                )
+        except Exception:
+            pass
+
+    if hasattr(model, "predict_proba"):
+        probabilities = model.predict_proba(incident)[0]
+        confidence = float(np.max(probabilities))
+        if hasattr(model, "classes_"):
+            prediction = model.classes_[np.argmax(probabilities)]
+        else:
+            prediction = model.predict(incident)[0]
+    else:
+        prediction = model.predict(incident)[0]
 
     return (
         str(prediction),
@@ -436,149 +485,49 @@ def select_hospital(
     Critical incidents require ICU availability.
     """
 
-    candidates = hospitals.copy()
+    hosp_ids = hospitals["Hospital_ID"].values
+    avail_beds = np.maximum(0, hospitals["Hospital_Capacity"].values - hospitals["Current_Load"].values)
+    avail_icu = np.maximum(0, hospitals["ICU_Capacity"].values - hospitals["Current_ICU_Load"].values)
+    lat_diff = float(patient_lat) - hospitals["Latitude"].values
+    lon_diff = float(patient_lon) - hospitals["Longitude"].values
+    dist_km = np.sqrt(lat_diff ** 2 + lon_diff ** 2) * 111.0
+    suit = np.array([hospital_suitability(condition, ht) for ht in hospitals["Hospital_Type"].values])
 
-    # ----------------------------------------------------------
-    # CAPACITY
-    # ----------------------------------------------------------
-
-    candidates[
-        "Available_Beds"
-    ] = (
-        candidates[
-            "Hospital_Capacity"
-        ]
-        - candidates[
-            "Current_Load"
-        ]
-    ).clip(
-        lower=0
-    )
-
-    candidates[
-        "Available_ICU"
-    ] = (
-        candidates[
-            "ICU_Capacity"
-        ]
-        - candidates[
-            "Current_ICU_Load"
-        ]
-    ).clip(
-        lower=0
-    )
-
-    # ----------------------------------------------------------
-    # DISTANCE
-    #
-    # Approximation for initial simulation.
-    # The live system can later replace this
-    # with a routing API.
-    # ----------------------------------------------------------
-
-    lat_difference = (
-        float(patient_lat)
-        - candidates["Latitude"]
-    )
-
-    lon_difference = (
-        float(patient_lon)
-        - candidates["Longitude"]
-    )
-
-    candidates[
-        "Distance_KM"
-    ] = (
-        np.sqrt(
-            lat_difference ** 2
-            + lon_difference ** 2
-        )
-        * 111
-    )
-
-    # ----------------------------------------------------------
-    # SUITABILITY
-    # ----------------------------------------------------------
-
-    candidates[
-        "Suitability"
-    ] = candidates[
-        "Hospital_Type"
-    ].apply(
-        lambda hospital_type:
-        hospital_suitability(
-            condition,
-            hospital_type,
-        )
-    )
-
-    # ----------------------------------------------------------
-    # BED AVAILABILITY
-    # ----------------------------------------------------------
-
-    candidates = candidates[
-        candidates[
-            "Available_Beds"
-        ] > 0
-    ].copy()
-
+    mask = avail_beds > 0
     if suitable_hospital_ids is not None:
-        candidates = candidates[
-            candidates[
-                "Hospital_ID"
-            ].isin(suitable_hospital_ids)
-        ].copy()
-
-    # ----------------------------------------------------------
-    # ICU REQUIREMENT
-    # ----------------------------------------------------------
+        suit_set = set(suitable_hospital_ids)
+        mask &= np.fromiter((h in suit_set for h in hosp_ids), dtype=bool, count=len(hosp_ids))
 
     if predicted_severity == "Critical":
-
-        candidates = candidates[
-            candidates[
-                "Available_ICU"
-            ] > 0
-        ].copy()
-
+        mask &= (avail_icu > 0)
         if live_icu_hospital_ids is not None:
-            candidates = candidates[
-                candidates[
-                    "Hospital_ID"
-                ].isin(live_icu_hospital_ids)
-            ].copy()
+            icu_set = set(live_icu_hospital_ids)
+            mask &= np.fromiter((h in icu_set for h in hosp_ids), dtype=bool, count=len(hosp_ids))
 
-    if candidates.empty:
-
+    if not np.any(mask):
         return (
             None,
             pd.DataFrame(),
         )
 
-    # ----------------------------------------------------------
-    # RANK
-    # ----------------------------------------------------------
-
-    candidates = candidates.sort_values(
-        by=[
-            "Suitability",
-            "Distance_KM",
-            "Available_ICU",
-            "Available_Beds",
-        ],
-        ascending=[
-            False,
-            True,
-            False,
-            False,
-        ],
-    ).reset_index(
-        drop=True
-    )
+    sub_indices = np.where(mask)[0]
+    # lexsort: primary key last, so (avail_beds, avail_icu, dist_km, suit)
+    order = np.lexsort((
+        -avail_beds[sub_indices],
+        -avail_icu[sub_indices],
+        dist_km[sub_indices],
+        -suit[sub_indices]
+    ))
+    best_idx = sub_indices[order[0]]
+    best_row = hospitals.iloc[best_idx].copy()
+    best_row["Available_Beds"] = avail_beds[best_idx]
+    best_row["Available_ICU"] = avail_icu[best_idx]
+    best_row["Distance_KM"] = dist_km[best_idx]
+    best_row["Suitability"] = suit[best_idx]
 
     return (
-        candidates.iloc[0].copy(),
-        candidates,
+        best_row,
+        hospitals.iloc[sub_indices[order]],
     )
 
 

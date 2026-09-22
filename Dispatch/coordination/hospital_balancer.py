@@ -179,7 +179,11 @@ class HospitalBalancer:
         """
         Returns (incoming_total, incoming_critical) for a hospital.
         """
-        res_list = self._reservations.get(str(hospital_id), [])
+        if not self._reservations:
+            return 0, 0
+        res_list = self._reservations.get(str(hospital_id))
+        if not res_list:
+            return 0, 0
         total = len(res_list)
         critical = sum(1 for r in res_list if r.requires_icu)
         return total, critical
@@ -253,6 +257,7 @@ class HospitalBalancer:
         condition: str = "General",
         mci_surge_counts: Optional[Dict[str, int]] = None,
         mci_surge_factor: float = 0.35,
+        proj: Optional[dict] = None,
     ) -> float:
         """
         Multi-objective allocation score for a candidate hospital.
@@ -267,7 +272,8 @@ class HospitalBalancer:
           6. Optional MCI surge damping across multi-casualty incidents.
         """
         hid = str(hospital_state.hospital_id)
-        proj = self.get_projected_capacity(hid, hospital_state)
+        if proj is None:
+            proj = self.get_projected_capacity(hid, hospital_state)
 
         # 1. Proximity penalty (normalized [0, 1])
         norm_dist = min(1.0, max(0.0, float(distance_km) / 25.0))
@@ -330,6 +336,7 @@ class HospitalBalancer:
         routing_engine=None,
         candidate_ids: Optional[Set[str]] = None,
         mci_surge_counts: Optional[Dict[str, int]] = None,
+        projections: Optional[dict] = None,
     ) -> Optional[str]:
         """
         Select optimal hospital using multi-objective load balancing.
@@ -339,13 +346,15 @@ class HospitalBalancer:
         """
         is_crit = str(severity).strip().lower() == "critical"
         candidates = []
+        target_ids = candidate_ids if candidate_ids is not None else hospitals.keys()
 
-        for hid, hosp in hospitals.items():
+        for hid in target_ids:
             hid_str = str(hid)
-            if candidate_ids is not None and hid_str not in candidate_ids:
+            hosp = hospitals.get(hid) or hospitals.get(hid_str)
+            if hosp is None:
                 continue
 
-            proj = self.get_projected_capacity(hid_str, hosp)
+            proj = projections.get(hid_str) if (projections is not None and hid_str in projections) else self.get_projected_capacity(hid_str, hosp)
 
             # Exclude hospitals with no projected available general beds
             if proj["projected_available_beds"] <= 0:
@@ -361,11 +370,13 @@ class HospitalBalancer:
 
             if routing_engine is not None:
                 try:
-                    eta = float(routing_engine.calculate_eta((patient_lat, patient_lon), (h_lat, h_lon)))
+                    router = getattr(routing_engine, "_router", routing_engine)
+                    circuity = getattr(router, "circuity_factor", 1.25)
+                    eta = round(max(0.1, (dist_km * circuity / 50.0) * 60.0), 2)
                 except Exception:
-                    eta = (dist_km / 50.0) * 60.0
+                    eta = round(max(0.1, (dist_km / 50.0) * 60.0), 2)
             else:
-                eta = (dist_km / 50.0) * 60.0
+                eta = round(max(0.1, (dist_km / 50.0) * 60.0), 2)
 
             score = self.score_hospital(
                 hospital_state=hosp,
@@ -374,6 +385,7 @@ class HospitalBalancer:
                 severity=severity,
                 condition=condition,
                 mci_surge_counts=mci_surge_counts,
+                proj=proj,
             )
 
             candidates.append((score, hid_str))

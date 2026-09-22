@@ -160,5 +160,32 @@
     "after_state_hash": "09b75471db494f2baa2d",
     "prediction_error": -0.15,
     "benefit_realization_ratio": 0.0
+  },
+  {
+    "recommendation_id": "REC_AUTO_OK",
+    "recommendation_type": "FLEET_REPOSITION",
+    "confidence": 0.97,
+    "predicted_benefit": 0.15,
+    "actual_benefit": 0.0,
+    "policy_decision": "AUTO_APPROVE",
+    "execution_mode": "AUTONOMOUS",
+    "outcome": "SUCCESSFUL",
+    "execution_latency": 0.0,
+    "timestamp": "2026-09-21T13:30:23.152456+00:00",
+    "sim_time": 0,
+    "affected_entities": {
+      "ambulance_id": "AMB_0002",
+      "target_zone": "JAIPUR_NORTH",
+      "donor_zone": "JAIPUR_CENTRAL",
+      "donor_avail_before": 10,
+      "donor_avail_after": 9,
+      "incident_id": 1,
+      "current_hospital_id": "HOSP_001",
+      "recommended_hospital_id": "HOSP_002"
+    },
+    "before_state_hash": "86accf29c496e6492506",
+    "after_state_hash": "09b75471db494f2baa2d",
+    "prediction_error": -0.15,
+    "benefit_realization_ratio": 0.0
   }
 ]

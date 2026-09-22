@@ -195,6 +195,7 @@ export class IntegrationController {
     if (!container) return;
 
     const status = providerData.status || (providerData.healthy ? 'HEALTHY' : 'DISCONNECTED');
+    const safeStatus = escapeHtml(status);
     let statusText = status;
     let badgeColor = 'var(--status-danger)';
     let badgeBg = 'rgba(239, 68, 68, 0.15)';

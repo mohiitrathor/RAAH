@@ -5,13 +5,13 @@
     "run_id": "run_test_p4_surge",
     "start_sim_time": 0,
     "end_sim_time": 10,
-    "wall_clock_duration_seconds": 2.0034,
+    "wall_clock_duration_seconds": 0.2938,
     "event_count": 43,
     "snapshot_count": 7,
     "completion_status": "COMPLETED",
     "deterministic_seed": 42,
     "replay_format_version": "1.0.0",
-    "created_at": "2026-09-03T06:47:22.337105+00:00"
+    "created_at": "2026-09-21T13:29:25.890622+00:00"
   },
   "scenario_definition": {
     "scenario_id": "DRILL_P4_SURGE",
@@ -65,7 +65,7 @@
         "tick_minutes": 1.0,
         "seed": 42
       },
-      "timestamp": "2026-09-03T06:47:20.390000+00:00"
+      "timestamp": "2026-09-21T13:29:25.646303+00:00"
     },
     {
       "event_id": 2,
@@ -124,7 +124,7 @@
           "HOSP_029": 1
         }
       },
-      "timestamp": "2026-09-03T06:47:22.298410+00:00"
+      "timestamp": "2026-09-21T13:29:25.853900+00:00"
     },
     {
       "event_id": 3,
@@ -143,7 +143,7 @@
         "hospital_id": "HOSP_064",
         "eta_minutes": 2.62
       },
-      "timestamp": "2026-09-03T06:47:22.298429+00:00"
+      "timestamp": "2026-09-21T13:29:25.853921+00:00"
     },
     {
       "event_id": 4,
@@ -162,7 +162,7 @@
         "hospital_id": "HOSP_271",
         "eta_minutes": 2.62
       },
-      "timestamp": "2026-09-03T06:47:22.298437+00:00"
+      "timestamp": "2026-09-21T13:29:25.853928+00:00"
     },
     {
       "event_id": 5,
@@ -181,7 +181,7 @@
         "hospital_id": "HOSP_136",
         "eta_minutes": 2.81
       },
-      "timestamp": "2026-09-03T06:47:22.298441+00:00"
+      "timestamp": "2026-09-21T13:29:25.853932+00:00"
     },
     {
       "event_id": 6,
@@ -200,7 +200,7 @@
         "hospital_id": "HOSP_289",
         "eta_minutes": 2.85
       },
-      "timestamp": "2026-09-03T06:47:22.298446+00:00"
+      "timestamp": "2026-09-21T13:29:25.853936+00:00"
     },
     {
       "event_id": 7,
@@ -219,7 +219,7 @@
         "hospital_id": "HOSP_263",
         "eta_minutes": 3.25
       },
-      "timestamp": "2026-09-03T06:47:22.298450+00:00"
+      "timestamp": "2026-09-21T13:29:25.853939+00:00"
     },
     {
       "event_id": 8,
@@ -238,7 +238,7 @@
         "hospital_id": "HOSP_256",
         "eta_minutes": 3.39
       },
-      "timestamp": "2026-09-03T06:47:22.298453+00:00"
+      "timestamp": "2026-09-21T13:29:25.853943+00:00"
     },
     {
       "event_id": 9,
@@ -257,7 +257,7 @@
         "hospital_id": "HOSP_116",
         "eta_minutes": 3.45
       },
-      "timestamp": "2026-09-03T06:47:22.298457+00:00"
+      "timestamp": "2026-09-21T13:29:25.853946+00:00"
     },
     {
       "event_id": 10,
@@ -276,7 +276,7 @@
         "hospital_id": "HOSP_080",
         "eta_minutes": 3.57
       },
-      "timestamp": "2026-09-03T06:47:22.298461+00:00"
+      "timestamp": "2026-09-21T13:29:25.853950+00:00"
     },
     {
       "event_id": 11,
@@ -295,7 +295,7 @@
         "hospital_id": "HOSP_106",
         "eta_minutes": 3.7
       },
-      "timestamp": "2026-09-03T06:47:22.298465+00:00"
+      "timestamp": "2026-09-21T13:29:25.853953+00:00"
     },
     {
       "event_id": 12,
@@ -314,7 +314,7 @@
         "hospital_id": "HOSP_092",
         "eta_minutes": 3.9
       },
-      "timestamp": "2026-09-03T06:47:22.298468+00:00"
+      "timestamp": "2026-09-21T13:29:25.853957+00:00"
     },
     {
       "event_id": 13,
@@ -333,7 +333,7 @@
         "hospital_id": "HOSP_270",
         "eta_minutes": 1.81
       },
-      "timestamp": "2026-09-03T06:47:22.298472+00:00"
+      "timestamp": "2026-09-21T13:29:25.853960+00:00"
     },
     {
       "event_id": 14,
@@ -352,7 +352,7 @@
         "hospital_id": "HOSP_296",
         "eta_minutes": 2.24
       },
-      "timestamp": "2026-09-03T06:47:22.298476+00:00"
+      "timestamp": "2026-09-21T13:29:25.853964+00:00"
     },
     {
       "event_id": 15,
@@ -371,7 +371,7 @@
         "hospital_id": "HOSP_149",
         "eta_minutes": 2.63
       },
-      "timestamp": "2026-09-03T06:47:22.298479+00:00"
+      "timestamp": "2026-09-21T13:29:25.853967+00:00"
     },
     {
       "event_id": 16,
@@ -390,7 +390,7 @@
         "hospital_id": "HOSP_009",
         "eta_minutes": 2.95
       },
-      "timestamp": "2026-09-03T06:47:22.298483+00:00"
+      "timestamp": "2026-09-21T13:29:25.853970+00:00"
     },
     {
       "event_id": 17,
@@ -409,7 +409,7 @@
         "hospital_id": "HOSP_251",
         "eta_minutes": 3.55
       },
-      "timestamp": "2026-09-03T06:47:22.298486+00:00"
+      "timestamp": "2026-09-21T13:29:25.853973+00:00"
     },
     {
       "event_id": 18,
@@ -428,7 +428,7 @@
         "hospital_id": "HOSP_003",
         "eta_minutes": 4.07
       },
-      "timestamp": "2026-09-03T06:47:22.298490+00:00"
+      "timestamp": "2026-09-21T13:29:25.853977+00:00"
     },
     {
       "event_id": 19,
@@ -447,7 +447,7 @@
         "hospital_id": "HOSP_076",
         "eta_minutes": 3.96
       },
-      "timestamp": "2026-09-03T06:47:22.298494+00:00"
+      "timestamp": "2026-09-21T13:29:25.853980+00:00"
     },
     {
       "event_id": 20,
@@ -466,7 +466,7 @@
         "hospital_id": "HOSP_084",
         "eta_minutes": 4.14
       },
-      "timestamp": "2026-09-03T06:47:22.298497+00:00"
+      "timestamp": "2026-09-21T13:29:25.853984+00:00"
     },
     {
       "event_id": 21,
@@ -485,7 +485,7 @@
         "hospital_id": "HOSP_156",
         "eta_minutes": 4.31
       },
-      "timestamp": "2026-09-03T06:47:22.298501+00:00"
+      "timestamp": "2026-09-21T13:29:25.853987+00:00"
     },
     {
       "event_id": 22,
@@ -504,7 +504,7 @@
         "hospital_id": "HOSP_029",
         "eta_minutes": 4.41
       },
-      "timestamp": "2026-09-03T06:47:22.298505+00:00"
+      "timestamp": "2026-09-21T13:29:25.853990+00:00"
     },
     {
       "event_id": 23,
@@ -517,7 +517,7 @@
       "payload": {
         "message": "Ambulance AMB_0662 arrived at destination HOSP_270."
       },
-      "timestamp": "2026-09-03T06:47:22.299309+00:00"
+      "timestamp": "2026-09-21T13:29:25.854758+00:00"
     },
     {
       "event_id": 24,
@@ -530,7 +530,7 @@
       "payload": {
         "message": "Ambulance AMB_0430 arrived at destination HOSP_149."
       },
-      "timestamp": "2026-09-03T06:47:22.304627+00:00"
+      "timestamp": "2026-09-21T13:29:25.860363+00:00"
     },
     {
       "event_id": 25,
@@ -543,7 +543,7 @@
       "payload": {
         "message": "Ambulance AMB_0484 arrived at destination HOSP_064."
       },
-      "timestamp": "2026-09-03T06:47:22.304635+00:00"
+      "timestamp": "2026-09-21T13:29:25.860371+00:00"
     },
     {
       "event_id": 26,
@@ -556,7 +556,7 @@
       "payload": {
         "message": "Ambulance AMB_0692 arrived at destination HOSP_136."
       },
-      "timestamp": "2026-09-03T06:47:22.304640+00:00"
+      "timestamp": "2026-09-21T13:29:25.860376+00:00"
     },
     {
       "event_id": 27,
@@ -569,7 +569,7 @@
       "payload": {
         "message": "Ambulance AMB_0759 arrived at destination HOSP_271."
       },
-      "timestamp": "2026-09-03T06:47:22.304645+00:00"
+      "timestamp": "2026-09-21T13:29:25.860380+00:00"
     },
     {
       "event_id": 28,
@@ -582,7 +582,7 @@
       "payload": {
         "message": "Ambulance AMB_0885 arrived at destination HOSP_296."
       },
-      "timestamp": "2026-09-03T06:47:22.304649+00:00"
+      "timestamp": "2026-09-21T13:29:25.860384+00:00"
     },
     {
       "event_id": 29,
@@ -595,7 +595,7 @@
       "payload": {
         "message": "Ambulance AMB_0936 arrived at destination HOSP_009."
       },
-      "timestamp": "2026-09-03T06:47:22.304653+00:00"
+      "timestamp": "2026-09-21T13:29:25.860388+00:00"
     },
     {
       "event_id": 30,
@@ -608,7 +608,7 @@
       "payload": {
         "message": "Ambulance AMB_0965 arrived at destination HOSP_289."
       },
-      "timestamp": "2026-09-03T06:47:22.304657+00:00"
+      "timestamp": "2026-09-21T13:29:25.860391+00:00"
     },
     {
       "event_id": 31,
@@ -621,7 +621,7 @@
       "payload": {
         "message": "Ambulance AMB_0197 arrived at destination HOSP_116."
       },
-      "timestamp": "2026-09-03T06:47:22.304963+00:00"
+      "timestamp": "2026-09-21T13:29:25.860693+00:00"
     },
     {
       "event_id": 32,
@@ -634,7 +634,7 @@
       "payload": {
         "message": "Ambulance AMB_0201 arrived at destination HOSP_251."
       },
-      "timestamp": "2026-09-03T06:47:22.304970+00:00"
+      "timestamp": "2026-09-21T13:29:25.860699+00:00"
     },
     {
       "event_id": 33,
@@ -647,7 +647,7 @@
       "payload": {
         "message": "Ambulance AMB_0243 arrived at destination HOSP_092."
       },
-      "timestamp": "2026-09-03T06:47:22.304974+00:00"
+      "timestamp": "2026-09-21T13:29:25.860703+00:00"
     },
     {
       "event_id": 34,
@@ -660,7 +660,7 @@
       "payload": {
         "message": "Ambulance AMB_0273 arrived at destination HOSP_256."
       },
-      "timestamp": "2026-09-03T06:47:22.304978+00:00"
+      "timestamp": "2026-09-21T13:29:25.860707+00:00"
     },
     {
       "event_id": 35,
@@ -673,7 +673,7 @@
       "payload": {
         "message": "Ambulance AMB_0279 arrived at destination HOSP_080."
       },
-      "timestamp": "2026-09-03T06:47:22.304981+00:00"
+      "timestamp": "2026-09-21T13:29:25.860711+00:00"
     },
     {
       "event_id": 36,
@@ -686,7 +686,7 @@
       "payload": {
         "message": "Ambulance AMB_0320 arrived at destination HOSP_076."
       },
-      "timestamp": "2026-09-03T06:47:22.304985+00:00"
+      "timestamp": "2026-09-21T13:29:25.860715+00:00"
     },
     {
       "event_id": 37,
@@ -699,10 +699,23 @@
       "payload": {
         "message": "Ambulance AMB_0729 arrived at destination HOSP_106."
       },
-      "timestamp": "2026-09-03T06:47:22.304990+00:00"
+      "timestamp": "2026-09-21T13:29:25.860718+00:00"
     },
     {
       "event_id": 38,
+      "sim_time": 4,
+      "event_type": "AMBULANCE_ARRIVED",
+      "entity_ids": {
+        "ambulance_id": "AMB_0797",
+        "hospital_id": "HOSP_003"
+      },
+      "payload": {
+        "message": "Ambulance AMB_0797 arrived at destination HOSP_003."
+      },
+      "timestamp": "2026-09-21T13:29:25.860722+00:00"
+    },
+    {
+      "event_id": 39,
       "sim_time": 4,
       "event_type": "AMBULANCE_ARRIVED",
       "entity_ids": {
@@ -712,10 +725,10 @@
       "payload": {
         "message": "Ambulance AMB_0913 arrived at destination HOSP_263."
       },
-      "timestamp": "2026-09-03T06:47:22.304994+00:00"
+      "timestamp": "2026-09-21T13:29:25.860725+00:00"
     },
     {
-      "event_id": 39,
+      "event_id": 40,
       "sim_time": 5,
       "event_type": "AMBULANCE_ARRIVED",
       "entity_ids": {
@@ -725,10 +738,10 @@
       "payload": {
         "message": "Ambulance AMB_0065 arrived at destination HOSP_156."
       },
-      "timestamp": "2026-09-03T06:47:22.314330+00:00"
+      "timestamp": "2026-09-21T13:29:25.868084+00:00"
     },
     {
-      "event_id": 40,
+      "event_id": 41,
       "sim_time": 5,
       "event_type": "AMBULANCE_ARRIVED",
       "entity_ids": {
@@ -738,10 +751,10 @@
       "payload": {
         "message": "Ambulance AMB_0404 arrived at destination HOSP_029."
       },
-      "timestamp": "2026-09-03T06:47:22.314339+00:00"
+      "timestamp": "2026-09-21T13:29:25.868092+00:00"
     },
     {
-      "event_id": 41,
+      "event_id": 42,
       "sim_time": 5,
       "event_type": "AMBULANCE_ARRIVED",
       "entity_ids": {
@@ -751,20 +764,7 @@
       "payload": {
         "message": "Ambulance AMB_0471 arrived at destination HOSP_084."
       },
-      "timestamp": "2026-09-03T06:47:22.314344+00:00"
-    },
-    {
-      "event_id": 42,
-      "sim_time": 5,
-      "event_type": "AMBULANCE_ARRIVED",
-      "entity_ids": {
-        "ambulance_id": "AMB_0797",
-        "hospital_id": "HOSP_003"
-      },
-      "payload": {
-        "message": "Ambulance AMB_0797 arrived at destination HOSP_003."
-      },
-      "timestamp": "2026-09-03T06:47:22.314349+00:00"
+      "timestamp": "2026-09-21T13:29:25.868097+00:00"
     },
     {
       "event_id": 43,
@@ -778,7 +778,7 @@
         "final_sim_time": 10,
         "total_events": 42
       },
-      "timestamp": "2026-09-03T06:47:22.337088+00:00"
+      "timestamp": "2026-09-21T13:29:25.890607+00:00"
     }
   ],
   "snapshots": [
@@ -17402,7 +17402,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:20.394963+00:00"
+      "timestamp": "2026-09-21T13:29:25.651164+00:00"
     },
     {
       "snapshot_id": 2,
@@ -35462,7 +35462,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.304193+00:00"
+      "timestamp": "2026-09-21T13:29:25.859941+00:00"
     },
     {
       "snapshot_id": 3,
@@ -35572,7 +35572,7 @@
           "condition": "Trauma",
           "severity": "Non-Urgent",
           "priority": 5,
-          "status": "DISPATCHED",
+          "status": "ARRIVED",
           "ambulance_id": "AMB_0797",
           "hospital_id": "HOSP_003"
         },
@@ -45388,22 +45388,13 @@
         {
           "ambulance_id": "AMB_0797",
           "ambulance_type": "Basic Life Support",
-          "status": "EN_ROUTE",
+          "status": "ARRIVED",
           "latitude": 26.897261609150487,
           "longitude": 75.74397939905461,
           "incident_id": 100012,
           "hospital_id": "HOSP_003",
-          "eta_minutes": 0.07000000000000028,
-          "route_waypoints": [
-            [
-              26.897261609150487,
-              75.74397939905461
-            ],
-            [
-              26.897261609150487,
-              75.74397939905461
-            ]
-          ],
+          "eta_minutes": 0.0,
+          "route_waypoints": [],
           "is_repositioning": false
         },
         {
@@ -47877,15 +47868,15 @@
         {
           "hospital_id": "HOSP_003",
           "name": "HOSP_003",
-          "current_load": 49,
+          "current_load": 50,
           "capacity": 219,
-          "available_beds": 170,
+          "available_beds": 169,
           "projected_available_beds": 169,
           "icu_capacity": 19,
           "current_icu_load": 3,
           "available_icu": 16,
           "projected_available_icu": 16,
-          "incoming_count": 1,
+          "incoming_count": 0,
           "incoming_critical": 0,
           "is_full": false
         },
@@ -52356,7 +52347,7 @@
           "resolved_sim_time": null,
           "status": "EVACUATING",
           "total_casualties": 20,
-          "evacuated_count": 16,
+          "evacuated_count": 17,
           "child_incident_ids": [
             100001,
             100002,
@@ -52547,7 +52538,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.311597+00:00"
+      "timestamp": "2026-09-21T13:29:25.865460+00:00"
     },
     {
       "snapshot_id": 4,
@@ -69440,7 +69431,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.319309+00:00"
+      "timestamp": "2026-09-21T13:29:25.873054+00:00"
     },
     {
       "snapshot_id": 5,
@@ -86333,7 +86324,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.324413+00:00"
+      "timestamp": "2026-09-21T13:29:25.878171+00:00"
     },
     {
       "snapshot_id": 6,
@@ -103226,7 +103217,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.331987+00:00"
+      "timestamp": "2026-09-21T13:29:25.885816+00:00"
     },
     {
       "snapshot_id": 7,
@@ -120119,7 +120110,7 @@
           "status": "SURPLUS"
         }
       },
-      "timestamp": "2026-09-03T06:47:22.337037+00:00"
+      "timestamp": "2026-09-21T13:29:25.890570+00:00"
     }
   ],
   "final_summary": {

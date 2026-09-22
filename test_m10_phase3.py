@@ -411,14 +411,15 @@ def run_phase3_tests():
         # TEST 24: Frontend Static Integration Checks
         # --------------------------------------------------------------
         print("\n[TEST 24] Frontend static integration checks...")
-        index_html = Path("/home/glitchedpotato/RAAH/frontend/index.html").read_text(encoding="utf-8")
+        REPO_ROOT = Path(__file__).resolve().parent
+        index_html = (REPO_ROOT / "frontend/index.html").read_text(encoding="utf-8")
         assert "nav-btn-replay" in index_html
         assert "replay-workspace" in index_html
         assert "replay-leaflet-map" in index_html
         assert "replay-timeline-list" in index_html
         assert "replay-event-inspector" in index_html
 
-        app_js = Path("/home/glitchedpotato/RAAH/frontend/js/app.js").read_text(encoding="utf-8")
+        app_js = (REPO_ROOT / "frontend/js/app.js").read_text(encoding="utf-8")
         assert "ReplayController" in app_js
         assert "ScenarioAnalysisController" in app_js
         print("✓ Frontend HTML/JS wiring verified.")

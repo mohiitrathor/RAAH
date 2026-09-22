@@ -535,6 +535,24 @@ def test_redirect_state(
     )
 
 
+test_pass.__test__ = False
+test_fail.__test__ = False
+test_initial_dispatch.__test__ = False
+test_live_state.__test__ = False
+test_hospital_failure.__test__ = False
+test_alternative_hospital.__test__ = False
+test_redirect_state.__test__ = False
+
+
+def test_ambulance_dispatch_integration_pipeline():
+    result = test_initial_dispatch()
+    state = test_live_state(result)
+    incident_id = int(result["incident_id"])
+    redir = test_hospital_failure(state, incident_id)
+    alt = test_alternative_hospital(state, redir)
+    test_redirect_state(state, incident_id, alt)
+
+
 # ==============================================================
 # MAIN
 # ==============================================================

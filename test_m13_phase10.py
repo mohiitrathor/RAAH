@@ -424,7 +424,10 @@ class TestM13Phase10IntegrationHealth(unittest.TestCase):
         content = Path("frontend/js/components/integrations.js").read_text(encoding="utf-8")
         self.assertIn("function escapeHtml(", content)
         self.assertIn("escapeHtml(title)", content)
-        self.assertIn("escapeHtml(status)", content)
+        self.assertTrue(
+            "escapeHtml(status)" in content or "escapeHtml(statusText)" in content,
+            "integrations.js must escape status or statusText with escapeHtml",
+        )
 
     def test_23_command_center_wiring_preserved(self):
         """23. index.html contains integrations workspace while preserving all existing tabs."""

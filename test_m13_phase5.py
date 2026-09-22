@@ -330,7 +330,10 @@ class TestM13Phase3(unittest.TestCase):
             content = f.read()
 
         self.assertIn('id="modal-decision-explanation"', content)
-        self.assertIn('src="js/components/explanation_modal.js"', content)
+        self.assertTrue(
+            bool(re.search(r'src="js/components/explanation_modal\.js(?:\?[^"]*)?"', content)),
+            "explanation_modal.js script tag missing in index.html",
+        )
         self.assertIn('id="decisions-tbody"', content)
         self.assertIn('id="drawer-incident-detail"', content)
 

@@ -13,6 +13,7 @@ import { openExplanationModal } from './explanation_modal.js';
 
 let drawerElement = null;
 let currentIncidentId = null;
+let currentIncidentData = null;
 
 export function setupDetailDrawer() {
   drawerElement = document.getElementById('drawer-incident-detail');
@@ -29,14 +30,34 @@ export function setupDetailDrawer() {
 
     // Full re-render when decision evidence changes (e.g. reroute executed)
     if (changedKeys.includes('decisions')) {
-      const incident = state.activeIncidents.find(i => i.incident_id === currentIncidentId);
+      const incident = (state.activeIncidents && state.activeIncidents.find(i => i.incident_id === currentIncidentId))
+        || (state.incidents && state.incidents.get(currentIncidentId))
+        || currentIncidentData;
       if (incident) renderDrawerContent(incident);
       return;
     }
 
     if (changedKeys.includes('activeIncidents') || changedKeys.includes('ambulances') || changedKeys.includes('hospitals')) {
-      const incident = state.activeIncidents.find(i => i.incident_id === currentIncidentId);
+      let incident = (state.activeIncidents && state.activeIncidents.find(i => i.incident_id === currentIncidentId))
+        || (state.incidents && state.incidents.get(currentIncidentId))
+        || currentIncidentData;
+
       if (!incident) return;
+
+      // Sync latest assigned ambulance telemetry and arrival status
+      if (incident.ambulance_id) {
+        const amb = state.ambulances.get(String(incident.ambulance_id));
+        if (amb) {
+          if (amb.status === 'ARRIVED') {
+            incident.status = 'ARRIVED';
+            incident.eta_minutes = 0.0;
+          } else if (amb.eta_minutes !== undefined && amb.eta_minutes !== null) {
+            incident.eta_minutes = amb.eta_minutes;
+          }
+        }
+      }
+
+      currentIncidentData = incident;
 
       // If drawer is already open for this incident, perform targeted in-place DOM updates (no flicker!)
       if (drawerElement.dataset.renderedIncidentId === String(incident.incident_id)) {
@@ -56,19 +77,23 @@ export async function openIncidentDetail(incidentId) {
   setupDetailDrawer();
 
   // Find incident from store
-  const incident = store.state.activeIncidents.find(i => i.incident_id === incidentId);
+  let incident = (store.state.activeIncidents && store.state.activeIncidents.find(i => i.incident_id === incidentId))
+    || (store.state.incidents && store.state.incidents.get(incidentId));
+
   if (!incident) {
     // Attempt to fetch from API
     try {
-      const inc = await api.getIncident(incidentId);
-      renderDrawerContent(inc);
-      drawerElement.classList.add('open');
+      incident = await api.getIncident(incidentId);
+      if (incident && store.state.incidents) {
+        store.state.incidents.set(incident.incident_id, incident);
+      }
     } catch (err) {
       showToast('Incident Not Found', `ID #${incidentId} is not in active state.`, 'warning');
+      return;
     }
-    return;
   }
 
+  currentIncidentData = incident;
   renderDrawerContent(incident);
   drawerElement.classList.add('open');
 }
@@ -79,6 +104,7 @@ export function closeIncidentDetail() {
     drawerElement.dataset.renderedIncidentId = '';
   }
   currentIncidentId = null;
+  currentIncidentData = null;
 }
 
 async function renderDrawerContent(incident) {
@@ -101,8 +127,16 @@ async function renderDrawerContent(incident) {
   } catch (_) {}
 
   const pClass = `p${incident.priority}`;
-  const etaDisplay = incident.eta_minutes !== null ? `${incident.eta_minutes.toFixed(1)} min` : '—';
-  const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE';
+  const isArrived = (ambulance && ambulance.status === 'ARRIVED') || incident.status === 'ARRIVED';
+  const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE' && !isArrived;
+  const effectiveStatus = isArrived ? 'ARRIVED' : (incident.status || 'DISPATCHED');
+  const etaDisplay = isArrived
+    ? '0.0 min (Arrived)'
+    : (incident.eta_minutes !== null && incident.eta_minutes !== undefined
+        ? `${Number(incident.eta_minutes).toFixed(1)} min`
+        : (ambulance && ambulance.eta_minutes !== null && ambulance.eta_minutes !== undefined
+            ? `${Number(ambulance.eta_minutes).toFixed(1)} min`
+            : '—'));
 
   const allHospitals = Array.from((store.state.hospitals && store.state.hospitals.values()) || []);
   const suitableHospitals = allHospitals
@@ -120,7 +154,7 @@ async function renderDrawerContent(incident) {
       <div class="drawer-title-group">
         <span class="incident-id-badge">#${incident.incident_id}</span>
         <span class="priority-pill ${pClass}">P${incident.priority} ${incident.severity}</span>
-        <span id="drawer-header-status-pill" class="status-pill status-${(incident.status || 'dispatched').toLowerCase()}">${incident.status || 'DISPATCHED'}</span>
+        <span id="drawer-header-status-pill" class="status-pill status-${effectiveStatus.toLowerCase()}">${effectiveStatus}</span>
       </div>
       <button class="drawer-close-btn" title="Close Drawer">&times;</button>
     </div>
@@ -147,7 +181,7 @@ async function renderDrawerContent(incident) {
           </div>
           <div class="detail-cell">
             <span class="label">Lifecycle Status</span>
-            <span id="drawer-cell-lifecycle" class="value">${incident.status || 'DISPATCHED'}</span>
+            <span id="drawer-cell-lifecycle" class="value">${effectiveStatus}</span>
           </div>
         </div>
       </div>
@@ -170,15 +204,15 @@ async function renderDrawerContent(incident) {
             </div>
             <div class="detail-cell">
               <span class="label">Operational Status</span>
-              <span id="drawer-amb-status" class="value status-text-${(ambulance.status || '').toLowerCase()}">${ambulance.status}</span>
+              <span id="drawer-amb-status" class="value status-text-${(ambulance.status || effectiveStatus).toLowerCase()}">${ambulance.status || effectiveStatus}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Remaining Route ETA</span>
-              <span id="drawer-amb-eta" class="value font-mono highlight text-accent">${etaDisplay}</span>
+              <span id="drawer-amb-eta" class="value font-mono highlight ${isArrived ? 'text-success' : 'text-accent'}">${etaDisplay}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Route Distance</span>
-              <span id="drawer-amb-distance" class="value font-mono">${ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—'}</span>
+              <span id="drawer-amb-distance" class="value font-mono">${isArrived ? '0.0 km' : (ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—')}</span>
             </div>
             <div class="detail-cell">
               <span class="label">Traffic / Road</span>
@@ -317,6 +351,19 @@ async function renderDrawerContent(incident) {
             <i data-lucide="corner-up-right"></i> Execute Reroute
           </button>
         </div>
+        <div id="drawer-reroute-notice" style="display: ${isEnRoute ? 'none' : 'block'}; margin-top: 8px;">
+          ${isArrived ? `
+            <div class="alert-banner info" style="font-size: 11px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; color: #86efac;">
+              <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #22c55e; flex-shrink: 0;"></i>
+              <span>Ambulance has arrived at destination hospital. Redirection is locked.</span>
+            </div>
+          ` : `
+            <div class="alert-banner warning" style="font-size: 11px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 4px; color: #fcd34d;">
+              <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #f59e0b; flex-shrink: 0;"></i>
+              <span>Ambulance is not en route. Redirection unavailable.</span>
+            </div>
+          `}
+        </div>
         <div id="eval-result-card" class="eval-result-card" style="display: none;"></div>
       </div>
     </div>
@@ -343,6 +390,19 @@ async function renderDrawerContent(incident) {
   const selectHosp = drawerElement.querySelector('#select-reroute-hospital');
 
   btnEval.addEventListener('click', async () => {
+    const amb = store.state.ambulances.get(String(incident.ambulance_id));
+    if (!amb || amb.status !== 'EN_ROUTE' || incident.status === 'ARRIVED') {
+      showToast(
+        'Evaluation Unavailable',
+        `Incident #${incident.incident_id} cannot be evaluated for redirection: ambulance is ${amb ? amb.status : 'not en route'}.`,
+        'warning'
+      );
+      btnEval.disabled = true;
+      btnExec.disabled = true;
+      if (selectHosp) selectHosp.disabled = true;
+      return;
+    }
+
     btnEval.disabled = true;
     evalCard.style.display = 'none';
 
@@ -395,6 +455,19 @@ async function renderDrawerContent(incident) {
   // Bind Execute Reroute
   const btnExec = drawerElement.querySelector('#btn-exec-reroute');
   btnExec.addEventListener('click', async () => {
+    const amb = store.state.ambulances.get(String(incident.ambulance_id));
+    if (!amb || amb.status !== 'EN_ROUTE' || incident.status === 'ARRIVED') {
+      showToast(
+        'Reroute Unavailable',
+        `Incident #${incident.incident_id} cannot be redirected: ambulance status is ${amb ? amb.status : 'unknown'} (must be EN_ROUTE).`,
+        'warning'
+      );
+      btnExec.disabled = true;
+      btnEval.disabled = true;
+      if (selectHosp) selectHosp.disabled = true;
+      return;
+    }
+
     const selectedHospId = selectHosp && selectHosp.value ? selectHosp.value : null;
     const targetDesc = selectedHospId ? `Hospital ${selectedHospId}` : 'the best available alternative hospital';
 
@@ -449,18 +522,21 @@ function updateDrawerTelemetry(incident) {
   const ambulance = store.state.ambulances.get(String(incident.ambulance_id));
   const hospital = store.state.hospitals.get(String(incident.hospital_id));
 
+  const isArrived = (ambulance && ambulance.status === 'ARRIVED') || incident.status === 'ARRIVED';
+  const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE' && !isArrived;
+  const effectiveStatus = isArrived ? 'ARRIVED' : (incident.status || 'DISPATCHED');
+
   // Header status
   const headerStatus = drawerElement.querySelector('#drawer-header-status-pill');
   if (headerStatus) {
-    const st = incident.status || 'DISPATCHED';
-    headerStatus.textContent = st;
-    headerStatus.className = `status-pill status-${st.toLowerCase()}`;
+    headerStatus.textContent = effectiveStatus;
+    headerStatus.className = `status-pill status-${effectiveStatus.toLowerCase()}`;
   }
 
   // Lifecycle status
   const lifecycleCell = drawerElement.querySelector('#drawer-cell-lifecycle');
   if (lifecycleCell) {
-    lifecycleCell.textContent = incident.status || 'DISPATCHED';
+    lifecycleCell.textContent = effectiveStatus;
   }
 
   // Ambulance telemetry
@@ -473,15 +549,21 @@ function updateDrawerTelemetry(incident) {
 
     const ambEta = drawerElement.querySelector('#drawer-amb-eta');
     if (ambEta) {
-      const eta = (incident.eta_minutes !== null && incident.eta_minutes !== undefined)
-        ? incident.eta_minutes
-        : ambulance.eta_minutes;
-      ambEta.textContent = (eta !== null && eta !== undefined) ? `${Number(eta).toFixed(1)} min` : '—';
+      if (isArrived) {
+        ambEta.textContent = '0.0 min (Arrived)';
+        ambEta.className = 'value font-mono highlight text-success';
+      } else {
+        const eta = (incident.eta_minutes !== null && incident.eta_minutes !== undefined)
+          ? incident.eta_minutes
+          : ambulance.eta_minutes;
+        ambEta.textContent = (eta !== null && eta !== undefined) ? `${Number(eta).toFixed(1)} min` : '—';
+        ambEta.className = 'value font-mono highlight text-accent';
+      }
     }
 
     const ambDist = drawerElement.querySelector('#drawer-amb-distance');
     if (ambDist) {
-      ambDist.textContent = ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—';
+      ambDist.textContent = isArrived ? '0.0 km' : (ambulance.route_distance_km ? `${ambulance.route_distance_km.toFixed(1)} km` : '—');
     }
 
     const ambTraffic = drawerElement.querySelector('#drawer-amb-traffic');
@@ -506,19 +588,15 @@ function updateDrawerTelemetry(incident) {
 
     const hospAlert = drawerElement.querySelector('#drawer-hosp-alert');
     if (hospAlert) {
-      if (hospital.is_full) {
-        hospAlert.style.display = 'flex';
-      } else {
-        hospAlert.style.display = 'none';
-      }
+      hospAlert.style.display = hospital.is_full ? 'flex' : 'none';
     }
   }
 
   // Operator action button state
-  const isEnRoute = ambulance && ambulance.status === 'EN_ROUTE';
   const selectHosp = drawerElement.querySelector('#select-reroute-hospital');
   const btnEval = drawerElement.querySelector('#btn-eval-reroute');
   const btnExec = drawerElement.querySelector('#btn-exec-reroute');
+  const noticeEl = drawerElement.querySelector('#drawer-reroute-notice');
 
   if (selectHosp && selectHosp.disabled !== !isEnRoute) {
     selectHosp.disabled = !isEnRoute;
@@ -528,5 +606,27 @@ function updateDrawerTelemetry(incident) {
   }
   if (btnExec && btnExec.disabled !== !isEnRoute) {
     btnExec.disabled = !isEnRoute;
+  }
+
+  if (noticeEl) {
+    if (!isEnRoute) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = isArrived
+        ? `
+          <div class="alert-banner info" style="font-size: 11px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; color: #86efac;">
+            <i data-lucide="check-circle-2" style="width: 14px; height: 14px; color: #22c55e; flex-shrink: 0;"></i>
+            <span>Ambulance has arrived at destination hospital. Redirection is locked.</span>
+          </div>
+        `
+        : `
+          <div class="alert-banner warning" style="font-size: 11px; padding: 6px 10px; display: flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 4px; color: #fcd34d;">
+            <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #f59e0b; flex-shrink: 0;"></i>
+            <span>Ambulance is not en route. Redirection unavailable.</span>
+          </div>
+        `;
+      if (window.lucide) window.lucide.createIcons();
+    } else {
+      noticeEl.style.display = 'none';
+    }
   }
 }

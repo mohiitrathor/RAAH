@@ -52,8 +52,8 @@ def run_phase2_tests():
     with client:
         client.post("/simulation/reset")
 
-        # Clean test audit store path
-        test_audit_path = Path("/home/glitchedpotato/RAAH/data/optimization/test_execution_audit.json")
+        REPO_ROOT = Path(__file__).resolve().parent
+        test_audit_path = REPO_ROOT / "data/optimization/test_execution_audit.json"
         if test_audit_path.exists():
             test_audit_path.unlink()
         audit_store = ExecutionAuditStore(store_path=test_audit_path)
@@ -572,7 +572,7 @@ def run_phase2_tests():
         # TEST 32: Frontend Zero-Dialog Static Audit
         # --------------------------------------------------------------
         print("\n[TEST 32] Frontend zero-dialog static audit...")
-        opt_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/optimization.js").read_text(encoding="utf-8")
+        opt_js = (REPO_ROOT / "frontend/js/components/optimization.js").read_text(encoding="utf-8")
         assert "OptimizationController" in opt_js
         assert "approveCurrentRecommendation" in opt_js
         assert "rejectCurrentRecommendation" in opt_js

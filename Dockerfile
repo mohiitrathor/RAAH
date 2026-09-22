@@ -39,6 +39,8 @@ USER raah
 
 # Standard production environment defaults
 ENV RAAH_ENVIRONMENT=production \
+    RAAH_DEV_AUTH_FALLBACK=false \
+    RAAH_CORS_ORIGINS="http://localhost:8000,http://127.0.0.1:8000" \
     RAAH_HOST=0.0.0.0 \
     RAAH_PORT=8000 \
     PYTHONUNBUFFERED=1 \

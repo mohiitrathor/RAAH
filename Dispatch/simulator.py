@@ -6,6 +6,11 @@ from typing import Optional, List, Dict, Any, Tuple, Set
 import pandas as pd
 
 
+_AMB_SPEEDS = {"BLS": 45.0, "ALS": 50.0, "ICU": 50.0, "TRAUMA": 55.0}
+_TRAF_MULTS = {"LIGHT": 1.0, "NORMAL": 1.0, "MODERATE": 1.15, "HEAVY": 1.3, "SEVERE": 1.5}
+_ROAD_MULTS = {"GOOD": 1.0, "AVERAGE": 1.1, "POOR": 1.25}
+
+
 def _distance_between(lat1, lon1, lat2, lon2):
     r1 = radians(float(lat1))
     o1 = radians(float(lon1))
@@ -20,13 +25,10 @@ def _distance_between(lat1, lon1, lat2, lon2):
 
 
 def _estimate_eta_to_patient(amb, distance_km):
-    speed = amb.get_speed_kmh() if hasattr(amb, "get_speed_kmh") else 50.0
-    if speed <= 0:
-        speed = 50.0
-    base_eta = (distance_km / speed) * 60.0
-    t_mult = amb.get_traffic_multiplier() if hasattr(amb, "get_traffic_multiplier") else 1.0
-    r_mult = amb.get_road_multiplier() if hasattr(amb, "get_road_multiplier") else 1.0
-    return round(max(0.1, base_eta * t_mult * r_mult), 2)
+    speed = _AMB_SPEEDS.get(getattr(amb, "ambulance_type", None), 50.0)
+    t_mult = _TRAF_MULTS.get(getattr(amb, "traffic_level", None), 1.0)
+    r_mult = _ROAD_MULTS.get(getattr(amb, "road_condition", None), 1.0)
+    return round(max(0.1, (distance_km / speed) * 60.0 * t_mult * r_mult), 2)
 
 
 
@@ -55,6 +57,7 @@ from dispatch_engine import (
     required_ambulance_level,
     SEVERITY_PRIORITY,
     AMBULANCE_CAPABILITY,
+    hospital_suitability,
 )
 from redirection_engine import check_live_redirection, find_best_alternative
 from events import EventEngine
@@ -132,6 +135,8 @@ class Simulator:
         self.last_known_eta = {}
         self.eta_recheck_required = set()
         self.mci_counter = 1
+        self.tick_count = 0
+        self._sim_time_accumulator = 0.0
 
         # ------------------------------------------------------
         # HISTORICAL PERSISTENCE HOOKS (OPTIONAL)
@@ -143,6 +148,12 @@ class Simulator:
         # ------------------------------------------------------
         # INITIALIZE
         # ------------------------------------------------------
+
+        try:
+            _, _, _, self._hospitals_df, self._model = load_data()
+        except Exception:
+            self._hospitals_df = None
+            self._model = None
 
         self.load_state()
         self.register_event_handlers()
@@ -167,6 +178,8 @@ class Simulator:
     # ==========================================================
 
     def load_state(self):
+        self.tick_count = 0
+        self._sim_time_accumulator = 0.0
 
         if hasattr(self, "coordinator"):
             if hasattr(self.coordinator, "hospital_balancer"):
@@ -583,11 +596,19 @@ class Simulator:
                     traffic_level=str(getattr(ambulance, "traffic_level", "NORMAL")),
                     road_condition=str(getattr(ambulance, "road_condition", "GOOD")),
                 )
-                initial_eta = float(ambulance.eta_minutes) if (ambulance.eta_minutes is not None and ambulance.eta_minutes > 0) else float(route.initial_eta_minutes)
-                route.total_duration_minutes = max(0.1, initial_eta)
+                if ambulance.eta_minutes is not None and ambulance.eta_minutes > 1.0:
+                    min_plausible_minutes = (route.route_distance_km / 120.0) * 60.0
+                    if float(ambulance.eta_minutes) >= min_plausible_minutes:
+                        route.total_duration_minutes = float(ambulance.eta_minutes)
+                    else:
+                        route.total_duration_minutes = float(route.initial_eta_minutes)
+                        ambulance.eta_minutes = route.initial_eta_minutes
+                        ambulance.base_eta_minutes = route.initial_eta_minutes
+                else:
+                    ambulance.eta_minutes = route.initial_eta_minutes
+                    ambulance.base_eta_minutes = route.initial_eta_minutes
+                    route.total_duration_minutes = float(route.initial_eta_minutes)
                 route.elapsed_minutes = 0.0
-                ambulance.eta_minutes = initial_eta
-                ambulance.base_eta_minutes = initial_eta
 
                 self.active_routes[ambulance.ambulance_id] = route
                 ambulance.route_distance_km = route.route_distance_km
@@ -678,17 +699,18 @@ class Simulator:
             "Respiratory_Disease",
         ]
 
-        model_input = pd.DataFrame(
-            [{col: custom_data[col] for col in feature_names}]
-        )
-
-        (
-            patients_df,
-            ambulances_df,
-            scenarios_df,
-            hospitals_df,
-            model,
-        ) = load_data()
+        model = getattr(self, "_model", None)
+        hospitals_df = getattr(self, "_hospitals_df", None)
+        if model is None or hospitals_df is None:
+            (
+                _,
+                _,
+                _,
+                hospitals_df,
+                model,
+            ) = load_data()
+            self._model = model
+            self._hospitals_df = hospitals_df
 
         (
             predicted_severity,
@@ -696,7 +718,7 @@ class Simulator:
             probabilities,
         ) = predict_severity(
             model,
-            model_input,
+            custom_data,
         )
 
         priority_number = SEVERITY_PRIORITY.get(
@@ -728,25 +750,48 @@ class Simulator:
                 predicted_severity
             )
 
-            scored = []
+            matching_ambs = []
+            fallback_ambs = []
             for amb in available_ambs:
-                dist = _distance_between(
-                    amb.latitude,
-                    amb.longitude,
-                    patient_lat,
-                    patient_lon,
-                )
-                eta = _estimate_eta_to_patient(amb, dist)
-                cap_level = AMBULANCE_CAPABILITY.get(
-                    amb.ambulance_type,
-                    1,
-                )
-                matches = cap_level >= required_level
-                scored.append((not matches, eta, dist, amb, matches))
+                cap_level = AMBULANCE_CAPABILITY.get(amb.ambulance_type, 1)
+                if cap_level >= required_level:
+                    matching_ambs.append(amb)
+                else:
+                    fallback_ambs.append(amb)
 
-            scored.sort(key=lambda x: (x[0], x[1]))
-            (not_match, selected_eta, selected_distance, selected_amb, cap_match) = scored[0]
-            fallback = not_match
+            candidates = matching_ambs if matching_ambs else fallback_ambs
+            is_fallback = not bool(matching_ambs)
+
+            best_amb = None
+            best_eta = float("inf")
+            best_dist = float("inf")
+            r2 = radians(patient_lat)
+            o2 = radians(patient_lon)
+            cos_r2 = cos(r2)
+
+            for amb in candidates:
+                r1 = radians(float(amb.latitude))
+                dlat = r2 - r1
+                dlon = o2 - radians(float(amb.longitude))
+                a = sin(dlat * 0.5) ** 2 + cos(r1) * cos_r2 * sin(dlon * 0.5) ** 2
+                a = min(1.0, max(0.0, a))
+                dist = round(12742.0 * atan2(sqrt(a), sqrt(1.0 - a)), 3)
+                if (dist / 55.0) * 60.0 > best_eta:
+                    continue
+                speed = _AMB_SPEEDS.get(amb.ambulance_type, 50.0)
+                t_mult = _TRAF_MULTS.get(amb.traffic_level, 1.0)
+                r_mult = _ROAD_MULTS.get(amb.road_condition, 1.0)
+                eta = round(max(0.1, (dist / speed) * 60.0 * t_mult * r_mult), 2)
+                if eta < best_eta or (eta == best_eta and dist < best_dist):
+                    best_eta = eta
+                    best_dist = dist
+                    best_amb = amb
+
+            selected_amb = best_amb
+            selected_eta = best_eta
+            selected_distance = best_dist
+            cap_match = not is_fallback
+            fallback = is_fallback
 
         if selected_amb is None:
             return {
@@ -785,44 +830,8 @@ class Simulator:
             and projections.get(h.hospital_id, {}).get("projected_available_icu", 0) > 0
         }
 
-        (
-            selected_hospital_row,
-            _,
-        ) = select_hospital(
-            predicted_severity,
-            str(custom_data["Condition"]),
-            patient_lat,
-            patient_lon,
-            hospitals_df,
-            suitable_hospital_ids=suitable_hospital_ids,
-            live_icu_hospital_ids=live_icu_hospital_ids,
-        )
-
-        if selected_hospital_row is None:
-            return {
-                "status": "NO_SUITABLE_HOSPITAL",
-                "incident_id": incident_id,
-                "patient": {
-                    "condition": str(custom_data["Condition"]),
-                    "predicted_severity": predicted_severity,
-                    "priority": f"P{priority_number}",
-                    "confidence": confidence,
-                },
-                "ambulance": {
-                    "ambulance_id": str(selected_amb.ambulance_id),
-                    "ambulance_type": str(selected_amb.ambulance_type),
-                    "eta_minutes": float(selected_eta),
-                    "distance_km": float(selected_distance),
-                    "traffic_level": str(selected_amb.traffic_level),
-                    "road_condition": str(selected_amb.road_condition),
-                    "capability_match": bool(cap_match),
-                    "fallback": bool(fallback),
-                },
-                "hospital": None,
-            }
-
         # Predictive hospital balancer refinement (M9 Phase 3)
-        balanced_hosp_id = self.coordinator.select_balanced_hospital(
+        balanced_hosp_id = self.coordinator.hospital_balancer.select_balanced_hospital(
             hospitals=self.state.hospitals,
             patient_lat=patient_lat,
             patient_lon=patient_lon,
@@ -830,9 +839,49 @@ class Simulator:
             condition=str(custom_data["Condition"]),
             routing_engine=self.routing_engine,
             candidate_ids=suitable_hospital_ids,
+            projections=projections,
         )
 
-        hospital_id = balanced_hosp_id if (balanced_hosp_id and balanced_hosp_id in self.state.hospitals) else str(selected_hospital_row["Hospital_ID"])
+        selected_hospital_row = None
+        if balanced_hosp_id and balanced_hosp_id in self.state.hospitals:
+            hospital_id = balanced_hosp_id
+        else:
+            (
+                selected_hospital_row,
+                _,
+            ) = select_hospital(
+                predicted_severity,
+                str(custom_data["Condition"]),
+                patient_lat,
+                patient_lon,
+                hospitals_df,
+                suitable_hospital_ids=suitable_hospital_ids,
+                live_icu_hospital_ids=live_icu_hospital_ids,
+            )
+
+            if selected_hospital_row is None:
+                return {
+                    "status": "NO_SUITABLE_HOSPITAL",
+                    "incident_id": incident_id,
+                    "patient": {
+                        "condition": str(custom_data["Condition"]),
+                        "predicted_severity": predicted_severity,
+                        "priority": f"P{priority_number}",
+                        "confidence": confidence,
+                    },
+                    "ambulance": {
+                        "ambulance_id": str(selected_amb.ambulance_id),
+                        "ambulance_type": str(selected_amb.ambulance_type),
+                        "eta_minutes": float(selected_eta),
+                        "distance_km": float(selected_distance),
+                        "traffic_level": str(selected_amb.traffic_level),
+                        "road_condition": str(selected_amb.road_condition),
+                        "capability_match": bool(cap_match),
+                        "fallback": bool(fallback),
+                    },
+                    "hospital": None,
+                }
+            hospital_id = str(selected_hospital_row["Hospital_ID"])
 
         # ------------------------------------------------------
         # Mutate Authoritative Live State
@@ -955,11 +1004,11 @@ class Simulator:
             },
             "hospital": {
                 "hospital_id": hospital_id,
-                "hospital_type": str(selected_hospital_row["Hospital_Type"]),
-                "distance_km": float(selected_hospital_row["Distance_KM"]),
+                "hospital_type": str(selected_hospital_row["Hospital_Type"]) if selected_hospital_row is not None else str(getattr(hosp_state, "hospital_type", "General")),
+                "distance_km": float(selected_hospital_row["Distance_KM"]) if selected_hospital_row is not None else float(_distance_between(patient_lat, patient_lon, hosp_state.latitude, hosp_state.longitude)),
                 "available_beds": int(hosp_state.available_beds if hosp_state else selected_hospital_row["Available_Beds"]),
                 "available_icu": int(hosp_state.available_icu if hosp_state else selected_hospital_row["Available_ICU"]),
-                "suitability": int(selected_hospital_row["Suitability"]),
+                "suitability": int(selected_hospital_row["Suitability"]) if selected_hospital_row is not None else int(hospital_suitability(str(custom_data["Condition"]), getattr(hosp_state, "hospital_type", "General"))),
             },
         }
 
@@ -2082,15 +2131,17 @@ class Simulator:
         minutes=1,
     ):
         """
-        Advance simulation by whole minutes (advancing both ambulances and simulation clock).
+        Advance simulation by whole or fractional minutes.
         """
-        minutes = max(
-            0,
-            int(minutes),
-        )
+        delta = max(0.0, float(minutes))
+        self.advance_ambulances(delta)
 
-        self.advance_ambulances(float(minutes))
-        self.advance_simulation_clock(minutes)
+        self._sim_time_accumulator = getattr(self, "_sim_time_accumulator", 0.0) + delta
+        if self._sim_time_accumulator >= 1.0:
+            int_mins = int(self._sim_time_accumulator)
+            self._sim_time_accumulator -= int_mins
+            self.advance_simulation_clock(int_mins)
+        self.tick_count = getattr(self, "tick_count", 0) + 1
 
     # ==========================================================
     # ETA RECHECK

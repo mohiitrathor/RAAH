@@ -391,22 +391,23 @@ def run_phase4_tests():
         # TEST 31: Frontend Integration and Static Checks
         # --------------------------------------------------------------
         print("\n[TEST 31] Frontend integration and static checks...")
-        index_html = Path("/home/glitchedpotato/RAAH/frontend/index.html").read_text(encoding="utf-8")
+        REPO_ROOT = Path(__file__).resolve().parent
+        index_html = (REPO_ROOT / "frontend/index.html").read_text(encoding="utf-8")
         assert "nav-btn-review" in index_html
         assert "review-workspace" in index_html
         assert "ANALYSIS MODE" in index_html
         assert "pir-root-cause-graph" in index_html
         assert "reg-cases-tbody" in index_html
 
-        app_js = Path("/home/glitchedpotato/RAAH/frontend/js/app.js").read_text(encoding="utf-8")
+        app_js = (REPO_ROOT / "frontend/js/app.js").read_text(encoding="utf-8")
         assert "PIRController" in app_js
         assert "RegressionController" in app_js
 
-        pir_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/pir.js").read_text(encoding="utf-8")
+        pir_js = (REPO_ROOT / "frontend/js/components/pir.js").read_text(encoding="utf-8")
         assert "PIRController" in pir_js
         assert "alert(" not in pir_js
 
-        reg_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/regression.js").read_text(encoding="utf-8")
+        reg_js = (REPO_ROOT / "frontend/js/components/regression.js").read_text(encoding="utf-8")
         assert "RegressionController" in reg_js
         assert "alert(" not in reg_js
         print("✓ Frontend HTML/JS wiring verified with zero alert() violations.")

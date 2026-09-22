@@ -61,8 +61,8 @@ def run_phase3_tests():
     with client:
         client.post("/simulation/reset")
 
-        # Clean test audit store path
-        test_audit_path = Path("/home/glitchedpotato/RAAH/data/optimization/test_execution_audit_p3.json")
+        REPO_ROOT = Path(__file__).resolve().parent
+        test_audit_path = REPO_ROOT / "data/optimization/test_execution_audit_p3.json"
         if test_audit_path.exists():
             test_audit_path.unlink()
         audit_store = ExecutionAuditStore(store_path=test_audit_path)
@@ -591,7 +591,7 @@ def run_phase3_tests():
         # TEST 46 & 47: Frontend UI & Zero-Dialog Audit
         # ------------------------------------------------------------------
         print("\n[TEST 46 & 47] Frontend UI & zero-dialog audit...")
-        opt_js = Path("/home/glitchedpotato/RAAH/frontend/js/components/optimization.js").read_text(encoding="utf-8")
+        opt_js = (REPO_ROOT / "frontend/js/components/optimization.js").read_text(encoding="utf-8")
         assert "btn-policy-guarded" in opt_js
         assert "handleToggleKillSwitch" in opt_js
         assert re.search(r'\b(alert|prompt|confirm)\s*\(', opt_js) is None
