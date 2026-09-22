@@ -1,51 +1,76 @@
-# RAAH — Real-Time Ambulance Allocation & Hospital Redirection Platform
+# RAAH
+**Real-time Ambulance Allocation & Hospital Redirection**
 
-RAAH is an intelligent Emergency Medical Services (EMS) dispatch, triage, and tactical coordination platform designed to optimize emergency response during routine operations, hospital saturation surges, and mass-casualty incidents (MCIs).
+[![CI](https://github.com/mohiitrathor/RAAH/actions/workflows/ci.yml/badge.svg)](https://github.com/mohiitrathor/RAAH/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-The platform combines calibrated machine learning for clinical severity prediction with deterministic, explainable algorithms for ambulance allocation, hospital destination selection, and dynamic en-route patient redirection.
+RAAH is an ML-assisted emergency dispatch and hospital coordination platform built around deterministic operational logic, live simulation state, and dynamic hospital redirection.
 
 > [!IMPORTANT]
 > **RESEARCH & DEMONSTRATION EMS PLATFORM DISCLAIMER**
-> RAAH is an operational research and demonstration software platform, **not a certified medical device** or clinical diagnostic tool.
-> - Machine learning models provide clinical risk/severity classification solely for tactical prioritization and resource routing.
-> - Fleet dispatch and hospital balancing algorithms are deterministic, auditable, and advisory.
-> - Dynamic redirection continuously monitors receiving facility capacities and travel constraints to assist dispatchers.
-> - Human dispatchers, incident commanders, and licensed healthcare professionals remain in authoritative control of all clinical care and dispatch decisions at all times.
+> RAAH is an operational research platform, decision-support prototype, and simulation environment — **it is not a certified medical device** or clinical diagnostic instrument.
+> - Machine learning models provide risk and priority classification solely for tactical prioritization and resource routing.
+> - Fleet dispatch, capability matching, and hospital balancing algorithms are deterministic and advisory.
+> - Dynamic redirection evaluates facility capacities and travel constraints to assist dispatchers.
+> - Human dispatchers, medical directors, and licensed healthcare professionals retain authoritative control over all clinical care and dispatch decisions at all times.
 
 ---
 
-## Quick Start
+## Overview
 
-Launch RAAH in seconds using the unified root launcher:
+Emergency Medical Services (EMS) face compounding challenges during mass-casualty events, peak hours, and local hospital saturation surges. In traditional CAD (Computer-Aided Dispatch) workflows, ambulance destination decisions are often static once assigned. If a receiving emergency department reaches saturation while an ambulance is en route, patient offload delays (bed blocking) can escalate rapidly.
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/mohiitrathor/RAAH.git
-cd RAAH
+RAAH combines:
+1. **Calibrated Machine Learning Triage**: Classifies patient clinical severity from emergency intake vitals into actionable priority tiers.
+2. **Deterministic Capability Allocation**: Matches incident requirements to vehicle capabilities (Advanced Life Support vs. Basic Life Support) and evaluates road network proximity.
+3. **Capacity-Aware Hospital Balancing**: Monitors real-time bed and ICU availability across regional receiving facilities to prevent department overcrowding.
+4. **Dynamic Mid-Transit Redirection**: Automatically detects facility saturation disruptions while transport is underway, evaluates alternative facilities, recalculates routes, and logs auditable decision evidence — locked once the vehicle arrives.
+5. **Real-Time Tactical Command Center**: Delivers live situational awareness via Server-Sent Events (SSE) and interactive GIS mapping.
 
-# 2. Run the unified launcher
-./run.sh
-```
+---
 
-The launcher automatically detects your Python environment (virtual environment, Conda `ai_env`, or system Python), verifies required packages, creates runtime directories, and boots the FastAPI backend. Open your browser to `http://localhost:8000`.
+## Why RAAH?
 
-### Primary Operational Interfaces
+* **Explainable & Deterministic**: Core resource allocations and facility choices follow clear, rule-based algorithms rather than opaque black-box optimization.
+* **Audit-Grade Decision Evidence**: Every triage classification, vehicle assignment, and mid-transit divert generates an immutable, structured audit log.
+* **Dynamic Surge Resilience**: En-route transports adapt to real-time hospital closures or sudden casualty surges before ambulances arrive at saturated facilities.
+* **Zero-Build Web Interface**: Modern, self-contained Command Center frontend using vanilla ES6 JavaScript and vendored Leaflet/Lucide assets without complex Node.js build pipelines.
+* **Durability & Crash Recovery**: Authoritative, thread-locked state engine backed by SQLite event logging and periodic checkpoint snapshots.
 
-| Command | Action |
-| :--- | :--- |
-| **`./run.sh`** | Launches FastAPI backend & Tactical Command Center on `http://localhost:8000` |
-| **`./run.sh demo`** | Executes the automated end-to-end live surge & divert demonstration |
-| **`./run.sh benchmark`** | Runs dispatch engine benchmarks, latency percentiles, and triage audits |
-| **`./run.sh test`** | Executes the complete automated regression test suite (`pytest -q`) |
-| **`./run.sh desktop`** | Launches the native Linux GTK3/WebKit2 desktop application |
-| **`./run.sh docker`** | Displays Docker containerization build and execution commands |
-| **`./run.sh --help`** | Displays detailed command line usage and options |
+---
+
+## Key Capabilities
+
+* **End-to-End Incident Intake & ML Triage**: Accepts 24 clinical parameters (vitals, GCS, condition indicators) and predicts priority (`P1` to `P4`).
+* **Deterministic Fleet Matching**: Dispatches ALS units for high-acuity incidents (`P1`/`P2`) and BLS units for lower-acuity calls (`P3`/`P4`).
+* **Hospital Bed & ICU Balancing**: Maintains in-flight reservation counts to balance emergency department load across the health network.
+* **Dynamic En-Route Redirection**: Event-driven re-routing of transporting ambulances upon receiving hospital capacity saturation (`HOSPITAL_FULL`), protected by arrival-locking safeguards.
+* **Replay & Post-Incident Review (PIR)**: Replays historical incident runs at variable speeds ($1\times$ to $10\times$) with side-by-side run comparison.
+* **Mass-Casualty Incident (MCI) Protocol**: Secondary triage queues and mutual-aid agency coordination across regional zones.
+* **External Telemetry Adapters**: Authenticated ingestion endpoints for external CAD, GPS/AVL vehicle pings, hospital capacity feeds, and traffic data.
 
 ---
 
 ## System Architecture
 
-RAAH maintains a strict architectural separation of concerns across clinical inference, tactical allocation, simulation kinetics, authoritative state persistence, and operator interfaces:
+```mermaid
+flowchart TD
+    A[Emergency Incident Intake] --> B[ML Clinical Severity Triage]
+    B --> C[Ambulance Capability Requirement\nALS vs. BLS]
+    C --> D[Deterministic Ambulance Allocation\nProximity & Availability]
+    D --> E[Hospital Suitability\nSpecialty & Department Matching]
+    E --> F[Hospital Selection & Capacity Reservation]
+    F --> G[Authoritative DispatchState\nThread-Locked / SQLite Telemetry]
+    G --> H{Operational Event}
+    H -->|Capacity Disruption / Surge| I[Dynamic Redirection Evaluation]
+    I --> J[Alternative Specialty Hospital]
+    J --> K[Dynamic Route Update & Waypoints]
+    K --> L[Immutable Decision Evidence Log]
+    G --> M[Real-Time Command Center\nServer-Sent Events / Leaflet GIS]
+```
+
+### Component Architecture
 
 ```
 External CAD / Telemetry              Live Dispatch Intake (UI)
@@ -91,132 +116,249 @@ External CAD / Telemetry              Live Dispatch Intake (UI)
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Core Components and Responsibilities
+---
 
-1. **Clinical Machine Learning Layer (`Models/Final Model/Predict_Severity.py`)**:
-   - Evaluates a calibrated 24-feature clinical vector (patient age, vitals, GCS, condition, respiratory distress, pain score, etc.).
-   - Predicts clinical severity (`Critical`, `Emergency`, `Urgent`, `Non-Urgent`) and priority level (`P1`–`P4`).
-   - The trained model pipeline (`logistic_regression_final.joblib`) is immutable and never modified at runtime.
-2. **Deterministic Dispatch Engine (`Dispatch/dispatch_engine.py`)**:
-   - Maps clinical priority to ambulance capability: Critical/Emergency (P1/P2) calls require Advanced Life Support (ALS) units; lower-acuity calls receive Basic Life Support (BLS) units.
-   - Calculates spherical Haversine distances and zone-adjusted ETAs with deterministic tie-breaking.
-3. **Deterministic Hospital Capacity Balancer (`Dispatch/coordination/hospital_balancer.py`)**:
-   - Tracks active in-flight bed and ICU reservations to prevent emergency department saturation.
-   - Evaluates department suitability (e.g., Trauma Center, Cardiac Center, ICU availability).
-4. **Dynamic Redirection Engine (`Dispatch/redirection_engine.py`)**:
-   - Event-driven monitoring of in-flight transports against hospital capacity disruptions (e.g. `HOSPITAL_FULL`).
-   - Diverts en-route ambulances to qualified alternative hospitals before arrival.
-   - Arrival-locking safeguards prevent redirection after an ambulance reaches `ARRIVED` status.
-5. **Authoritative DispatchState & Persistence (`Dispatch/state.py`, `api/persistence/`)**:
-   - Single source of truth managed under an internal thread lock.
-   - SQLite event telemetry with automated periodic checkpointing and crash recovery.
-6. **Tactical Command Center Frontend (`frontend/`)**:
-   - Built with zero-build vanilla ES6 JavaScript, modern CSS, and vendored Leaflet and Lucide assets.
-   - Connects to real-time Server-Sent Events (`/events/stream`) with automatic reconnection.
+## How Dispatch Works
+
+1. **Intake & Vector Normalization**: Emergency caller observations and patient vitals are mapped into a standardized 24-feature clinical vector.
+2. **Clinical Severity Inference**: The scikit-learn pipeline predicts clinical severity category and maps it to priority level `P1` (Critical), `P2` (Emergency), `P3` (Urgent), or `P4` (Non-Urgent).
+3. **Vehicle Allocation**:
+   - `P1` and `P2` calls require **Advanced Life Support (ALS)** units equipped for critical interventions.
+   - `P3` and `P4` calls are serviced by **Basic Life Support (BLS)** units.
+   - Candidate vehicles are scored by road network proximity, status (`AVAILABLE`), and station zone.
+4. **Hospital Selection**:
+   - Matches clinical specialty needs (Trauma Center, Cardiac Catheterization Lab, Stroke Unit, ICU).
+   - Verifies bed availability and reserves capacity in real time to prevent overloading single facilities.
+5. **State Broadcast**: The authoritative `DispatchState` updates vehicle status to `EN_ROUTE_TO_SCENE`, persists state to SQLite, and broadcasts updates via SSE to all connected dashboards.
 
 ---
 
-## Key Workflows & System Capabilities
+## ML Triage
 
-### 1. End-to-End Incident Intake & ML Triage
-Operators or CAD adapters submit patient vital signs, Glasgow Coma Scale (GCS), chief complaint, and scene coordinates. The system passes the 24-dimensional feature vector through the clinical model, outputting predicted severity, priority class, and clinical confidence.
+The clinical triage component utilizes a trained **Logistic Regression** pipeline evaluated against multi-class emergency incident data.
 
-### 2. Deterministic ALS/BLS Fleet Allocation
-Based on the assessed priority, the engine matches incident requirements to available vehicle capabilities (ALS for P1/P2, BLS for P3/P4). It evaluates road network travel times, vehicle status, and station zones to dispatch the optimal unit.
+### Offline Model Evaluation (Training & Validation)
 
-### 3. Capacity-Aware Hospital Selection
-The hospital balancer selects destination facilities matching the patient's clinical needs (e.g., Trauma, Cardiac, Neurological) while reserving bed/ICU slots in real time to prevent sudden emergency department overcrowding.
+The clinical severity prediction model was trained and evaluated on 100,000 emergency patient incidents (80,000 train / 20,000 test stratified split) across 24 input features:
 
-### 4. Dynamic En-Route Redirection
-If a receiving hospital experiences unexpected saturation or closure while an ambulance is en route, the redirection engine triggers an automated divert evaluation, identifies the next-best qualified facility, updates transit waypoints, and alerts dispatchers. Redirection is locked once arrival occurs.
+| Parameter | Specification |
+| :--- | :--- |
+| **Model Type** | Multi-class Logistic Regression with L2 regularization |
+| **Pipeline Architecture** | `ColumnTransformer` (StandardScaler for numerics, OneHotEncoder for categoricals) |
+| **Input Features** | 24 clinical features (18 numerical vitals/scores, 6 categorical condition indicators) |
+| **Target Classes** | 5 levels: `Non-Urgent`, `Low`, `Moderate`, `Emergency`, `Critical` |
+| **Overall Accuracy** | **68.95%** |
+| **Balanced Accuracy** | **67.07%** |
+| **Model Artifact** | Frozen joblib pipeline (`Models/Final Model/logistic_regression_final.joblib`) |
+| **Framework Version** | Exactly pinned to `scikit-learn==1.7.2` |
 
-### 5. Post-Incident Review (PIR) & Historical Replay
-Every state transition, dispatch decision, and telemetry update is captured in SQLite event logs. Operators can replay historical runs at variable speeds ($1\times$ to $10\times$), inspect side-by-side run comparisons, and generate auditable Post-Incident Review packages.
-
-### 6. Mass-Casualty Incidents (MCI) & Mutual Aid
-During large-scale incidents, RAAH activates MCI protocols: secondary triage queues, mutual-aid agency coordination, and multi-zone casualty distribution across regional trauma networks.
-
-### 7. External Ingestion Adapters
-Standardized M2M ingestion endpoints accept external CAD incidents, GPS automatic vehicle location (AVL) pings, hospital capacity FHIR updates, and traffic feeds with cryptographic key validation and idempotency caching.
+> [!NOTE]
+> Balanced accuracy was prioritized during model evaluation to ensure sensitive identification of rare, high-acuity `Critical` cases within imbalanced emergency incident distributions. This offline evaluation measures predictive classification and is completely separate from runtime dispatch latency benchmarks.
 
 ---
 
-## One-Click Surge & Divert Demonstration
+## Dynamic Hospital Redirection
 
-The Tactical Command Center includes a built-in one-click demonstration mode:
+When an ambulance is transporting a patient (`EN_ROUTE_TO_HOSPITAL`), conditions at the receiving facility may deteriorate due to sudden casualty surges or equipment failure:
 
-1. Start RAAH with `./run.sh` and open `http://localhost:8000`.
-2. Click the prominent **`[⚡ SIMULATE SURGE & DIVERT]`** button in the header bar.
-3. The interactive **Demo Workflow Timeline** overlay tracks 9 real-time milestones:
-   - **`01 INCIDENT RECEIVED`**: Baseline reset and emergency cardiac call intake.
-   - **`02 ML TRIAGE`**: High-acuity patient classified as **Critical (P1)** by clinical model.
-   - **`03 AMBULANCE ASSIGNED`**: Nearest available ALS unit dispatched to the scene.
-   - **`04 HOSPITAL SELECTED`**: Initial destination hospital with Cardiac ICU chosen.
-   - **`05 CAPACITY DISRUPTION`**: Injects sudden hospital saturation (`HOSPITAL_FULL`).
-   - **`06 REDIRECTION EVALUATED`**: Balancer computes alternative receiving facilities.
-   - **`07 ALT HOSPITAL SELECTED`**: Next-best qualified specialty facility selected.
-   - **`08 ROUTE UPDATED`**: Dynamic transit route recalculated and updated on GIS map.
-   - **`09 DECISION RECORDED`**: Immutable decision evidence log permanently recorded.
+1. **Disruption Trigger**: The hospital status updates to `HOSPITAL_FULL` or `DIVERT`.
+2. **Candidate Re-Evaluation**: The redirection engine evaluates alternative qualified hospitals within an acceptable detour radius.
+3. **Divert Decision**: If a suitable facility with available capacity exists, the transport destination is updated, the bed reservation is transferred, and new routing waypoints are calculated.
+4. **Decision Evidence**: An auditable evidence record is committed to SQLite documenting why the diversion occurred, alternative facilities considered, and ETA differentials.
+5. **Arrival-Lock Safeguard**: Once the ambulance status transitions to `ARRIVED`, dynamic redirection is permanently locked. Any subsequent divert attempts return HTTP 404 / operation rejected.
 
-You can also execute the exact same end-to-end demonstration headlessly from your terminal:
+---
+
+## Tactical Command Center
+
+The Tactical Command Center provides dispatchers and incident commanders with a unified real-time dashboard:
+
+* **Interactive GIS Map**: Dark-mode Leaflet map showing live ambulance positions, stations, incidents, and receiving hospitals.
+* **Live Fleet Status**: Grid showing vehicle availability, crew capability (ALS vs. BLS), current speed, and active mission phase.
+* **Hospital Capacity Meters**: Real-time occupancy gauges tracking regular bed and ICU utilization.
+* **Incident Intake Drawer**: Manual dispatch intake form for walk-in or phone calls with instant ML triage calculation.
+* **Decision Evidence Modal**: Comprehensive forensic breakdown of every automated dispatch and divert decision.
+* **Post-Incident Review**: Historical run selector with replay controls ($1\times$, $2\times$, $5\times$, $10\times$) and timeline scrubber.
+
+---
+
+## Demo
+
+RAAH includes a complete, self-contained demonstration flow that walks through the entire emergency response cycle:
+
+```text
+01 Incident Received ──> 02 ML Triage (Critical P1) ──> 03 Ambulance Assigned (ALS)
+      │
+      ▼
+04 Hospital Selected (Cardiac ICU) ──> 05 Capacity Disruption (HOSPITAL_FULL)
+      │
+      ▼
+06 Redirection Evaluated ──> 07 Alternative Hospital Selected ──> 08 Route Updated
+      │
+      ▼
+09 Decision Recorded in Audit Log ──> 10 Arrival & Reroute Lock Enforced
+```
+
+### Running the Headless Demo
+
+Execute the automated demonstration script directly from your terminal:
 
 ```bash
 ./run.sh demo
 ```
 
+The script boots a temporary backend instance, injects a critical cardiac incident, simulates hospital capacity saturation, verifies the automated dynamic divert, validates the decision evidence log, and confirms the arrival-lock safeguard.
+
+### Running the Demo via Web UI
+
+1. Start the platform: `./run.sh`
+2. Open `http://localhost:8000` in your browser.
+3. Click the **`[⚡ SIMULATE SURGE & DIVERT]`** button in the top navigation bar.
+4. Watch the interactive 9-step timeline overlay track each milestone in real time on the GIS map.
+
 ---
 
-## Benchmarks & Evaluation
+## Demo Preview
 
-RAAH provides a clear separation between **offline clinical model evaluation** and **live operational dispatch benchmarks**.
+The repository includes a fully functional, zero-build web interface:
 
-### 1. Offline Clinical Model Evaluation (Training & Validation)
+```bash
+./run.sh start
+```
 
-The clinical severity prediction model was trained and evaluated on 100,000 emergency patient incidents (80,000 train / 20,000 test stratified split) across 24 input features:
+Then open your browser to:
 
-| Metric | Logistic Regression (Final Pipeline) |
-| :--- | :--- |
-| **Overall Accuracy** | **68.95%** |
-| **Balanced Accuracy** | **67.07%** |
-| **Feature Dimensionality** | 24 clinical features (18 numeric, 6 categorical) |
-| **Target Classes** | 5 levels (`Non-Urgent`, `Low`, `Moderate`, `Emergency`, `Critical`) |
-| **Model Artifact** | Frozen Scikit-Learn Pipeline (`Models/Final Model/logistic_regression_final.joblib`) |
+```text
+http://localhost:8000
+```
 
-*Balanced accuracy was prioritized during model selection to ensure sensitive detection of rare, high-acuity Critical cases within imbalanced emergency incident data.*
+From the Command Center, you can monitor live vehicle movement, trigger disaster drills, inspect decision evidence, and run post-incident replays.
 
-### 2. Live Operational Dispatch Benchmarks (Runtime Performance)
+---
 
-Run the unified runtime benchmark suite:
+## Performance
+
+The dispatch and redirection engine is continuously benchmarked for high-throughput, low-latency execution:
 
 ```bash
 ./run.sh benchmark
 ```
 
-Results measured across simulated emergency dispatch and dynamic divert workloads:
+### Verified Benchmark Scorecard
 
-| Metric | Target | Measured Result | Status |
-| :--- | :--- | :--- | :--- |
-| **Mean Dispatch Latency** | `< 50.0 ms` | **~8.0 ms** | PASS |
-| **Median Dispatch Latency** | `< 20.0 ms` | **~7.5 ms** | PASS |
-| **Dynamic Divert Latency** | `< 20.0 ms` | **~1.5 ms** | PASS |
-| **Ambulance Allocation Rate** | `100.0%` | **100.0%** | PASS |
-| **Hospital Allocation Rate** | `100.0%` | **100.0%** | PASS |
-| **Capability Match Rate** | `> 95.0%` | **100.0%** | PASS |
-| **Engine Errors** | `0` | **0** | ZERO ERRORS |
+| Metric | Verified Result | Target Threshold | Status |
+| :--- | ---: | :--- | :---: |
+| **Mean Dispatch Latency** | **~8.30 ms** | $< 50.0\text{ ms}$ | PASS |
+| **Median Dispatch Latency** | **~8.27 ms** | $< 20.0\text{ ms}$ | PASS |
+| **Dynamic Redirect Latency** | **~1.66 ms** | $< 20.0\text{ ms}$ | PASS |
+| **Ambulance Allocation Rate** | **100.0%** | $100.0\%$ | PASS |
+| **Hospital Allocation Rate** | **100.0%** | $100.0\%$ | PASS |
+| **Capability Match Rate** | **100.0%** | $> 95.0\%$ | PASS |
+| **Dispatch Engine Errors** | **0** | $0$ | ZERO ERRORS |
+| **Regression Test Suite** | **418 passed** | $418\text{ passed}$ | PASS |
+
+> [!NOTE]
+> Benchmark results are measured within the RAAH discrete-time simulation environment on local hardware; these figures reflect software algorithm throughput and do not represent real-world EMS vehicle arrival or road transit guarantees.
 
 ---
 
-## Containerization & Deployment
+## Quick Start
 
-RAAH provides production container specifications for portable deployment.
+### Prerequisites
 
-### Container Build & Execution Commands
+* Python 3.10 – 3.13 (Python 3.12 recommended)
+* Modern web browser (Chrome, Firefox, Safari, Edge)
+
+### Installation & Launch
 
 ```bash
-# 1. Build the Docker image
+# 1. Clone the repository
+git clone https://github.com/mohiitrathor/RAAH.git
+cd RAAH
+
+# 2. Run the unified launcher
+./run.sh
+```
+
+The launcher automatically detects available virtual environments or Conda (`ai_env`), verifies dependencies, initializes storage directories, and starts the FastAPI server on `http://localhost:8000`.
+
+---
+
+## CLI Commands
+
+The unified [`run.sh`](run.sh) script provides access to all platform workflows:
+
+| Command | Description |
+| :--- | :--- |
+| `./run.sh` | Launches FastAPI backend & Command Center on `http://localhost:8000` |
+| `./run.sh start` | Same as `./run.sh` (explicit start command) |
+| `./run.sh demo` | Executes the automated end-to-end live surge & divert demonstration |
+| `./run.sh benchmark` | Runs dispatch latency percentiles and allocation quality audits |
+| `./run.sh test` | Runs the full regression test suite (`pytest -q`) |
+| `./run.sh desktop` | Launches the native Linux GTK3/WebKit2 desktop application |
+| `./run.sh docker` | Displays Docker build and execution instructions |
+| `./run.sh --help` | Displays command line usage and environment options |
+
+---
+
+## API
+
+Interactive OpenAPI Swagger UI documentation is available at `http://localhost:8000/docs`.
+
+### Primary Endpoints
+
+| Endpoint | Method | Purpose |
+| :--- | :---: | :--- |
+| `/` | `GET` | Tactical Operations Command Center (redirects to `/dashboard/`) |
+| `/health` | `GET` | Process liveness probe |
+| `/health/ready` | `GET` | Deep readiness probe (database, simulator, ML, adapters) |
+| `/events/stream` | `GET` | Real-time Server-Sent Events (SSE) telemetry feed |
+| `/state/snapshot` | `GET` | Current authoritative simulation state snapshot |
+| `/dispatch/incident` | `POST` | Ingest incident and calculate optimal ambulance & hospital |
+| `/dispatch/redirection` | `POST` | Evaluate dynamic hospital redirection for en-route transport |
+| `/decision-evidence/incident/{id}` | `GET` | Retrieve auditable decision evidence records |
+| `/replays/runs` | `GET` | List recorded simulation runs available for PIR replay |
+
+---
+
+## Authentication & Security
+
+RAAH enforces strict security and environment safeguards:
+
+* **Role-Based Access Control (RBAC)**: REST endpoints support JWT Bearer token authentication and Machine-to-Machine (M2M) API keys with granular scopes (`cad:write`, `gps:write`, `hospital:write`).
+* **Production Invariants**:
+  * `RAAH_DEV_AUTH_FALLBACK` is strictly disabled (`false`) in production.
+  * `RAAH_JWT_SECRET_KEY` must be configured with a cryptographically strong secret ($\ge 32$ bytes). Default development signing keys are rejected on startup.
+  * CORS origins must be explicitly enumerated in production; wildcard origin (`*`) with credentials enabled is prohibited.
+* **Immutable Clinical Model**: The trained logistic regression pipeline is frozen and read-only.
+* **Auditable Telemetry**: Every state transition and dispatch decision records an immutable audit log entry.
+
+### Configuration Reference (`.env.example`)
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `RAAH_APP_NAME` | `"RAAH — Emergency Dispatch & Coordination Platform"` | Platform application title |
+| `RAAH_ENVIRONMENT` | `development` | Deployment environment (`development`, `staging`, `production`) |
+| `RAAH_HOST` | `0.0.0.0` | Bind host address |
+| `RAAH_PORT` | `8000` | Bind port |
+| `RAAH_AUTH_ENFORCED` | `true` | Enforces authentication on protected API routes |
+| `RAAH_DEV_AUTH_FALLBACK` | `false` (in prod) | Development token fallback (must be `false` in production) |
+| `RAAH_JWT_SECRET_KEY` | *(Secret string)* | Cryptographic signing key ($\ge 32$ bytes in production) |
+| `RAAH_CORS_ORIGINS` | `http://localhost:8000` | Allowed CORS origins (comma-separated, no wildcards in prod) |
+| `RAAH_DATABASE_PATH` | `data/raah_history.db` | Persistent SQLite database file path |
+| `RAAH_CHECKPOINT_INTERVAL_SECONDS` | `30.0` | Periodic state snapshot interval |
+
+---
+
+## Docker
+
+Containerization manifests are provided for container-based deployments:
+
+```bash
+# 1. Build the production Docker image
 docker build -t raah:latest .
 
-# 2. Run with environment variables
+# 2. Run container
 docker run -d \
   --name raah \
   -p 8000:8000 \
@@ -229,81 +371,21 @@ docker compose up -d
 ```
 
 > [!NOTE]
-> The multi-stage `Dockerfile` and `docker-compose.yml` configurations have been validated against production deployment contracts. During this release preparation phase, local Docker daemon execution was unavailable on the build host, so containerized execution requires an active Docker/Podman runtime on the target host.
+> The multi-stage `Dockerfile` and `docker-compose.yml` configurations have been statically validated against the project configuration contract. Running these commands requires a host with an active Docker or Podman daemon.
 
 ---
 
-## Testing & Quality Assurance
+## Desktop Application
 
-Execute the complete regression test suite:
+For dedicated dispatch workstation deployment, RAAH includes a native Linux desktop application built with GTK 3 and WebKit2:
 
 ```bash
-./run.sh test
+./run.sh desktop
 ```
 
-All 418 milestone test cases pass with zero errors, zero failures, and zero unhandled skips across:
-- Clinical ML inference and fast-path analytical equivalence
-- Deterministic ALS/BLS capability matching and proximity calculations
-- Dynamic mid-transit hospital redirection and arrival-lock invariants
-- Multi-agency mutual aid and mass casualty incident coordination
-- Ingestion adapters, M2M authentication, and idempotency caching
-- SQLite persistence, periodic checkpoints, and crash recovery
-- Native Linux desktop wrapper and process supervisor
-
----
-
-## Production Configuration & Environment
-
-Configuration is managed via environment variables prefixed with `RAAH_`, defined in `.env.example`:
-
-| Variable | Default | Description |
-| :--- | :--- | :--- |
-| `RAAH_APP_NAME` | `"RAAH — Emergency Dispatch & Coordination Platform"` | Canonical platform name |
-| `RAAH_ENVIRONMENT` | `development` | Deployment environment (`development`, `staging`, `production`) |
-| `RAAH_HOST` | `0.0.0.0` | Bind host address |
-| `RAAH_PORT` | `8000` | Bind port |
-| `RAAH_AUTH_ENFORCED` | `true` | Enforces authentication on protected API routes |
-| `RAAH_DEV_AUTH_FALLBACK` | `false` (in prod) | Development token fallback; **must be false in production** |
-| `RAAH_JWT_SECRET_KEY` | *(Secret string)* | Cryptographic signing key ($\ge 32$ bytes in production) |
-| `RAAH_CORS_ORIGINS` | `http://localhost:8000` | Allowed CORS origins (comma-separated, no wildcards in prod) |
-| `RAAH_DATABASE_PATH` | `data/raah_history.db` | Persistent SQLite database file path |
-| `RAAH_CHECKPOINT_INTERVAL_SECONDS` | `30.0` | Periodic state snapshot interval |
-| `RAAH_CAD_PROVIDER` | `mock` | CAD adapter provider (`mock`, `webhook`, `vendor`) |
-| `RAAH_HOSPITAL_PROVIDER` | `mock` | Hospital capacity provider (`mock`, `fhir`, `vendor`) |
-
----
-
-## System Requirements
-
-- **Python**: Python 3.10 – 3.13 (Python 3.12 recommended)
-- **Scikit-Learn**: Exactly pinned to `scikit-learn==1.7.2` for binary model artifact compatibility
-- **Operating System**: Linux (Ubuntu 20.04+, Debian 11+, RHEL/Fedora), macOS 12+, or Windows via WSL2
-- **Frontend Dependencies**: None (Zero-build ES6 modules with vendored Leaflet and Lucide assets)
-- **Desktop Application (Optional)**: Python 3 with `PyGObject` (GTK 3.0) and `WebKit2` 4.1
-
----
-
-## Useful Endpoints
-
-| Endpoint | Method | Description |
-| :--- | :---: | :--- |
-| `http://localhost:8000/` | `GET` | Tactical Operations Command Center (redirects to `/dashboard/`) |
-| `http://localhost:8000/docs` | `GET` | Interactive OpenAPI Swagger UI documentation |
-| `http://localhost:8000/health` | `GET` | Process liveness probe |
-| `http://localhost:8000/health/ready` | `GET` | Deep readiness probe (database, simulator, ML, adapters) |
-| `http://localhost:8000/events/stream` | `GET` | Real-time Server-Sent Events (SSE) telemetry feed |
-| `http://localhost:8000/state/snapshot` | `GET` | Current full simulation state snapshot |
-| `http://localhost:8000/decision-evidence/incident/{id}` | `GET` | Auditable decision evidence records for an incident |
-
----
-
-## Limitations & Non-Goals
-
-1. **Simulation Environment**: The live dispatch kinematics operate in discrete simulation time. Vehicle velocities, acceleration profiles, and path traversal reflect mathematical kinematics models rather than live hardware telemetry.
-2. **Synthetic Demonstration Data**: The provided datasets (`ambulances.csv`, `hospitals.csv`, `patient_incidents.csv`) represent realistic synthetic data designed for research, simulation drills, and performance evaluation.
-3. **External Routing Providers**: When external routing providers (e.g. OSRM, Google Maps Platform) are not configured with live API credentials, RAAH automatically falls back to local spherical Haversine distance with zone velocity approximations.
-4. **Regulatory Non-Certification**: RAAH is an operational research and tactical coordination software prototype. It is not certified under FDA, CE, or regional medical device regulations for automated diagnosis or autonomous dispatch.
-5. **Host Environment Notice**: Docker and Podman were not installed on the build host during this release cycle; container specifications have been statically validated against the configuration contract.
+* Embeds the Tactical Command Center in a dedicated hardware-accelerated desktop window.
+* Includes an integrated background supervisor that manages the FastAPI backend lifecycle automatically.
+* Verified with a dedicated unit test suite (`test_desktop_wrapper.py`: 7/7 tests passing).
 
 ---
 
@@ -311,6 +393,8 @@ Configuration is managed via environment variables prefixed with `RAAH_`, define
 
 ```text
 RAAH/
+├── .github/                         # GitHub Actions CI Workflows
+│   └── workflows/ci.yml             # Automated testing, demo, and syntax validation
 ├── api/                             # FastAPI Backend & Integration Layer
 │   ├── adapters/                    # External provider adapters & M2M auth (CAD, GPS, Hospital, Traffic)
 │   ├── auth/                        # JWT cryptographic token security & RBAC permissions
@@ -370,8 +454,48 @@ RAAH/
 
 ---
 
+## Testing
+
+Execute the comprehensive automated test suite:
+
+```bash
+./run.sh test
+```
+
+All **418 test cases** pass with zero errors and zero failures across:
+* Clinical ML triage feature transformations and analytical fast-path equivalence
+* Deterministic ALS/BLS capability matching and spatial proximity calculations
+* Hospital bed reservation tracking and department suitability scoring
+* Dynamic en-route redirection triggers and arrival-locking invariants
+* Multi-agency mutual aid and mass casualty incident coordination
+* Ingestion adapters, M2M authentication, and idempotency caching
+* SQLite persistence, periodic checkpoints, and crash recovery
+* Native Linux desktop wrapper and process supervisor
+
+---
+
+## Limitations
+
+1. **Discrete Simulation Environment**: Kinematic vehicle velocities and transit durations reflect mathematical models in discrete simulation time rather than live hardware telemetry.
+2. **Synthetic Demonstration Data**: The bundled incident, fleet, and hospital datasets represent realistic synthetic data designed for research, simulation drills, and evaluation.
+3. **External Routing Providers**: When external routing credentials (e.g., OSRM, Google Maps Platform) are not configured, the system falls back to spherical Haversine distances with zone velocity heuristics.
+4. **Regulatory Non-Certification**: RAAH is an operational research and tactical coordination software prototype. It is not certified under FDA, CE, or regional medical device regulations for automated diagnosis or autonomous dispatch.
+5. **Host Environment Notice**: Docker daemon was not installed on the build host during this release cycle; container specifications have been statically verified and are ready for deployment on container-enabled environments.
+
+---
+
+## Roadmap
+
+* [ ] Live OSRM / OpenStreetMap routing tile integration
+* [ ] Multi-region federation for cross-state mutual aid dispatch
+* [ ] Webhook adapters for live FHIR emergency department capacity feeds
+* [ ] Mobile-optimized responsive layout for field supervisor tablets
+* [ ] Automated scenario generator for regional disaster readiness drills
+
+---
+
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](file:///home/glitchedpotato/Downloads/RAAH/LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 Copyright © 2026 Mohit Rathore.
